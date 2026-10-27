@@ -80,7 +80,7 @@ jobs:
           platforms: linux/arm64
           build-args: |
             GIT_COMMIT=${{ github.sha }}
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/assistant:${{ steps.branch_tag.outputs.value }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/assistantpersonnel:${{ steps.branch_tag.outputs.value }}
 
       - name: Build and push – main (tag = latest)
         if: github.ref == 'refs/heads/main'
@@ -91,7 +91,7 @@ jobs:
           platforms: linux/arm64
           build-args: |
             GIT_COMMIT=${{ github.sha }}
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/assistant:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/assistantpersonnel:latest
 
       - name: Build and push – git tag (tag = version + latest)
         if: startsWith(github.ref, 'refs/tags/')
@@ -103,5 +103,5 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/assistant:${{ github.ref_name }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/assistant:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/assistantpersonnel:${{ github.ref_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/assistantpersonnel:latest

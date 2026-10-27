@@ -225,6 +225,7 @@ class SessionFlowIntegrationTest {
         }
                 mvc.perform(get("/js/widgets/weight.js")).andExpect(status().isOk());
                 mvc.perform(get("/js/widgets/weather.js")).andExpect(status().isOk());
+                mvc.perform(get("/js/widgets/announcements.js")).andExpect(status().isOk());
         mvc.perform(get("/css/theme.css")).andExpect(status().isOk());
         mvc.perform(get("/css/home.css"))
                 .andExpect(status().isOk())
@@ -451,6 +452,59 @@ class SessionFlowIntegrationTest {
     }
 
     @Test
+    void adminManagesAnnouncementsSharedByAllProfilesAndBackupIncludesThem() throws Exception {
+        long profileId = createProfile("Annonces lecteur", 0.3f);
+        Cookie faceCookie = login(profileId);
+        mvc.perform(get("/api/announcements")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/admin/announcements").with(csrf()).param("title", "Interdit")
+                        .param("startsAt", "2020-01-01T00:00").param("endsAt", "2999-01-01T00:00")
+                        .cookie(faceCookie))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString("/admin/login")));
+
+        MockHttpSession admin = adminSession();
+        mvc.perform(post("/admin/announcements").session(admin).with(csrf()).param("title", "Annonce IT")
+                        .param("startsAt", "2020-01-01T00:00").param("endsAt", "2999-01-01T00:00")
+                        .param("countdown", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/admin"));
+        mvc.perform(post("/admin/announcements").session(admin).with(csrf()).param("title", "Incohérente")
+                        .param("startsAt", "2999-01-01T00:00").param("endsAt", "2020-01-01T00:00"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attribute("notice", "La date de fin doit être postérieure à la date de début."));
+        mvc.perform(post("/admin/announcements").session(admin).with(csrf()).param("title", "Expirée")
+                        .param("startsAt", "2019-01-01T00:00").param("endsAt", "2020-01-01T00:00"))
+                .andExpect(status().is3xxRedirection());
+
+        mvc.perform(get("/admin").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Annonce IT")))
+                .andExpect(content().string(containsString("En cours")))
+                .andExpect(content().string(containsString("Expirée")));
+
+        mvc.perform(get("/api/announcements").cookie(faceCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.serverNow").isNumber())
+                .andExpect(jsonPath("$.announcements.length()").value(1))
+                .andExpect(jsonPath("$.announcements[0].title").value("Annonce IT"))
+                .andExpect(jsonPath("$.announcements[0].countdown").value(true));
+
+        MvcResult pendingDownload = mvc.perform(get("/admin/backup").session(admin))
+                .andExpect(request().asyncStarted()).andReturn();
+        byte[] backup = mvc.perform(asyncDispatch(pendingDownload)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        assertThat(objectMapper.readTree(backup).path("tables").path("announcement").size()).isEqualTo(2);
+
+        for (Long id : jdbcTemplate.queryForList("select id from announcement", Long.class)) {
+            mvc.perform(post("/admin/announcements/" + id + "/delete").session(admin).with(csrf()))
+                    .andExpect(status().is3xxRedirection());
+        }
+        mvc.perform(get("/api/announcements").cookie(faceCookie))
+                .andExpect(jsonPath("$.announcements.length()").value(0));
+    }
+
+    @Test
     void appRegistryDiscoversWidgetsAndIsolatesPreferencesAndFragments() throws Exception {
         long alice = createProfile("Widget Alice", 2.3f);
         long bob = createProfile("Widget Bob", 4.3f);
@@ -461,16 +515,16 @@ class SessionFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/api/apps").cookie(aliceCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].key").value("sample-widget"))
-                .andExpect(jsonPath("$[0].enabled").value(false));
+                .andExpect(jsonPath("$[1].key").value("sample-widget"))
+                .andExpect(jsonPath("$[1].enabled").value(false));
 
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":[{\"key\":\"sample-widget\",\"enabled\":true,"
                                 + "\"position\":0,\"configJson\":\"{\\\"message\\\":\\\"Alice\\\"}\"}]}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[1].key").value("sample-widget"))
-                .andExpect(jsonPath("$[1].enabled").value(true))
-                .andExpect(jsonPath("$[1].position").value(0));
+                .andExpect(jsonPath("$[2].key").value("sample-widget"))
+                .andExpect(jsonPath("$[2].enabled").value(true))
+                .andExpect(jsonPath("$[2].position").value(0));
 
         mvc.perform(get("/api/apps").cookie(bobCookie))
                 .andExpect(status().isOk())
@@ -522,11 +576,11 @@ class SessionFlowIntegrationTest {
 
         mvc.perform(get("/api/apps").cookie(aliceCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[1].key").value("weather"))
-                .andExpect(jsonPath("$[1].position").value(0))
-                .andExpect(jsonPath("$[1].configJson").value("{\"location\":{\"name\":\"Lyon\"}}"))
-                .andExpect(jsonPath("$[2].key").value("weight"))
-                .andExpect(jsonPath("$[2].position").value(1));
+                .andExpect(jsonPath("$[2].key").value("weather"))
+                .andExpect(jsonPath("$[2].position").value(0))
+                .andExpect(jsonPath("$[2].configJson").value("{\"location\":{\"name\":\"Lyon\"}}"))
+                .andExpect(jsonPath("$[3].key").value("weight"))
+                .andExpect(jsonPath("$[3].position").value(1));
 
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":["
@@ -536,12 +590,12 @@ class SessionFlowIntegrationTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/api/apps").cookie(aliceCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[1].position").value(2))
-                .andExpect(jsonPath("$[2].position").value(4));
+                .andExpect(jsonPath("$[2].position").value(2))
+                .andExpect(jsonPath("$[3].position").value(4));
         mvc.perform(get("/api/apps").cookie(bobCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[2].key").value("weight"))
-                .andExpect(jsonPath("$[2].position").value(0));
+                .andExpect(jsonPath("$[3].key").value("weight"))
+                .andExpect(jsonPath("$[3].position").value(0));
 
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":["
@@ -594,8 +648,8 @@ class SessionFlowIntegrationTest {
 
         mvc.perform(get("/api/apps").cookie(cookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[2].key").value("weight"))
-                .andExpect(jsonPath("$[2].enabled").value(true));
+                .andExpect(jsonPath("$[3].key").value("weight"))
+                .andExpect(jsonPath("$[3].enabled").value(true));
         mvc.perform(get("/apps/weight/fragment").cookie(cookie))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("data-weight-chart")))

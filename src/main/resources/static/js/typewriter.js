@@ -23,7 +23,7 @@ function stopAnimation(element) {
 export function typeText(element, value, options = {}) {
   const text = String(value ?? '');
   const current = animationStates.get(element);
-  if (current?.text === text) {
+  if (current?.text === text && !options.restart) {
     return current.promise;
   }
   stopAnimation(element);

@@ -1070,3 +1070,54 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.app-widget[data-app-key="announcements"] > h2 {
+  text-align: center;
+}
+
+.announcement-entries {
+  display: grid;
+  gap: var(--assistant-space-3);
+  margin: var(--assistant-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.announcement-entry {
+  padding-top: var(--assistant-space-3);
+  border-top: 1px solid var(--assistant-border);
+  text-align: center;
+}
+
+.announcement-title,
+.announcement-countdown {
+  margin: 0;
+}
+
+.announcement-countdown {
+  margin-top: var(--assistant-space-1);
+  color: var(--assistant-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.announcement-progress {
+  width: 80%;
+  height: 4px;
+  margin: var(--assistant-space-2) auto 0;
+  background: var(--assistant-bg);
+  border: 1px solid var(--assistant-border-strong);
+}
+
+.announcement-progress-fill {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--assistant-fg) 0%, var(--assistant-border-strong) 50%, var(--assistant-fg) 100%);
+  background-size: 200% 100%;
+  transition: width 1s linear;
+  animation: announcement-progress-sweep 2s linear infinite;
+}
+
+@keyframes announcement-progress-sweep {
+  from { background-position: 200% 0; }
+  to { background-position: 0 0; }
+}

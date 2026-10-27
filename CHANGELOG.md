@@ -2,6 +2,14 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.2]
+
+### Added
+- Widget « Annonces » : annonces communes à tous les profils, gérées depuis `/admin` (création, modification, suppression manuelle, statut à venir / en cours / expirée), avec dates de début et de fin saisies en heure de Paris. `GET /api/announcements` ne renvoie que les annonces en cours, triées par date de fin croissante, avec l'instant serveur. Les annonces marquées compte à rebours affichent mois, jours, heures, minutes et secondes (unités de tête nulles masquées) décomptés en temps réel sur l'horloge serveur, et disparaissent à l'échéance. Les titres sont réécrits avec l'animation d'écriture à un intervalle aléatoire de 15 à 60 s propre à chaque annonce ; les annonces gardent un curseur clignotant en fin de texte et celles sans compte à rebours affichent leur date et heure de fin. Les annonces avec compte à rebours affichent aussi une barre de progression fine (80 % de la largeur, balayage animé) entre leur début et leur fin (`startsAt` ajouté à l'API). La table `announcement` est incluse dans la sauvegarde.
+
+### Changed
+- `typeText` accepte l'option `restart` pour rejouer l'écriture d'un texte inchangé.
+
 ## [0.0.1]
 
 ### Added

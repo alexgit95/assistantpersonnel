@@ -47,6 +47,16 @@ entity "app_session" as app_session {
   * expires_at_ms : bigint  ' session glissante
 }
 
+entity "announcement" as announcement {
+  * id : bigint <<PK, identity>>
+  --
+  * title : varchar(200)
+  * starts_at_ms : bigint  ' epoch ms UTC, saisie en heure de Paris
+  * ends_at_ms : bigint
+  * countdown : boolean  ' affiche un compte a rebours jusqu'a la fin
+  ' Donnee globale : aucun lien avec profile.
+}
+
 profile ||--o{ face_embedding : "supprime en cascade"
 profile ||--o{ profile_app : "supprime en cascade"
 profile ||--o{ weight_entry : "historique du poids"

@@ -1,11 +1,15 @@
 package com.assistant.admin;
 
+import com.assistant.announcements.AnnouncementService;
+import com.assistant.common.ApiException;
 import com.assistant.profile.ProfileService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,10 +35,13 @@ public class AdminController {
 
     private final ProfileService profileService;
     private final BackupService backupService;
+    private final AnnouncementService announcementService;
 
-    public AdminController(ProfileService profileService, BackupService backupService) {
+    public AdminController(ProfileService profileService, BackupService backupService,
+                           AnnouncementService announcementService) {
         this.profileService = profileService;
         this.backupService = backupService;
+        this.announcementService = announcementService;
     }
 
     @GetMapping("/admin/login")
@@ -93,6 +100,47 @@ public class AdminController {
         return "redirect:/admin";
     }
 
+    @PostMapping("/admin/announcements")
+    public String createAnnouncement(@RequestParam String title, @RequestParam String startsAt,
+                                     @RequestParam String endsAt,
+                                     @RequestParam(defaultValue = "false") boolean countdown,
+                                     RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Annonce créée.",
+                () -> announcementService.create(title, parseParis(startsAt), parseParis(endsAt), countdown));
+    }
+
+    @PostMapping("/admin/announcements/{id}")
+    public String updateAnnouncement(@PathVariable long id, @RequestParam String title,
+                                     @RequestParam String startsAt, @RequestParam String endsAt,
+                                     @RequestParam(defaultValue = "false") boolean countdown,
+                                     RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Annonce modifiée.",
+                () -> announcementService.update(id, title, parseParis(startsAt), parseParis(endsAt), countdown));
+    }
+
+    @PostMapping("/admin/announcements/{id}/delete")
+    public String deleteAnnouncement(@PathVariable long id, RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Annonce supprimée.", () -> announcementService.delete(id));
+    }
+
+    private String saveAnnouncement(RedirectAttributes redirectAttributes, String successMessage, Runnable action) {
+        try {
+            action.run();
+            redirectAttributes.addFlashAttribute("notice", successMessage);
+        } catch (ApiException exception) {
+            redirectAttributes.addFlashAttribute("notice", exception.getMessage());
+        }
+        return "redirect:/admin";
+    }
+
+    private static LocalDateTime parseParis(String value) {
+        try {
+            return LocalDateTime.parse(value == null ? "" : value.strip());
+        } catch (DateTimeParseException exception) {
+            throw new ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Date invalide.");
+        }
+    }
+
     private String restoreError(String message, int status, int page, Model model, HttpServletResponse response) {
         response.setStatus(status);
         model.addAttribute("notice", message);
@@ -101,6 +149,7 @@ public class AdminController {
     }
 
     private void populateIndex(int page, Model model) {
+        model.addAttribute("announcements", announcementService.listAll());
         model.addAttribute("profiles", profileService.listAdminProfiles(
                 PageRequest.of(Math.max(0, page), PAGE_SIZE, Sort.by(Sort.Direction.ASC, "id"))));
     }

@@ -57,11 +57,15 @@ Tous les textes de l'interface, messages d'erreur, dates (fr-FR) et réponses d'
 - **THEN** elle déclare `lang="fr"` et tous ses libellés sont en français
 
 ### Requirement: Textes déjà affichés
-Un texte déjà affiché et inchangé MUST NOT être ré-animé lors d'une actualisation périodique.
+Un texte déjà affiché et inchangé MUST NOT être ré-animé lors d'une actualisation périodique, sauf lorsqu'un widget demande explicitement sa réécriture (réécriture aléatoire du widget Annonces).
 
 #### Scenario: Rafraîchissement d'un widget
 - **WHEN** un widget se rafraîchit avec un contenu identique
 - **THEN** aucun effet d'écriture n'est rejoué
+
+#### Scenario: Réécriture explicitement demandée
+- **WHEN** un widget demande la réécriture d'un texte inchangé
+- **THEN** l'effet d'écriture est rejoué, en respectant la désactivation et la réduction des animations
 
 ### Requirement: Accueil sans défilement
 L'accueil SHALL tenir dans la fenêtre sans défilement et SHALL conserver une géométrie fixe : horloge et aperçu webcam en haut à gauche, avatar en haut à droite, emplacement principal central et quatre emplacements secondaires. Les dimensions peuvent s'adapter à l'écran, mais les emplacements SHALL conserver leurs relations spatiales.

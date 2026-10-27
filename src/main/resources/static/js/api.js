@@ -51,6 +51,7 @@ export const api = {
   weatherCities: (query) => request('GET', `/api/weather/cities?query=${encodeURIComponent(query)}`),
   saveWeatherLocation: (location) => request('PUT', '/api/weather/location', location),
   weatherForecast: () => request('GET', '/api/weather'),
+  announcements: () => request('GET', '/api/announcements'),
   createProfile: (name, embeddings, avatar) => request('POST', '/api/profiles', { name, embeddings, avatar }),
   updateEmbeddings: (profileId, embeddings, replace, avatar) => request(
     'PUT', `/api/profiles/${profileId}/embeddings`, { embeddings, replace, avatar }),

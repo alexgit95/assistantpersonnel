@@ -126,3 +126,17 @@ test('repeated marked-text rendering reuses the original string during and after
   assert.equal(element.children[1], visual);
   assert.equal(visual.textContent, 'Profil connecté');
 });
+
+test('restart replays the animation for unchanged text', async () => {
+  setupBrowser();
+  const element = new FakeElement();
+  await typeText(element, 'Annonce', { speedMs: 1 });
+  const firstSpan = element.children[1];
+
+  const replay = typeText(element, 'Annonce', { speedMs: 1, restart: true });
+
+  assert.notEqual(element.children[1], firstSpan);
+  assert.equal(element.children[1].textContent, '');
+  await replay;
+  assert.equal(element.children[1].textContent, 'Annonce');
+});

@@ -63,7 +63,8 @@ a {
   border: 0;
 }
 
-.typewriter-visual.is-typing::after {
+.typewriter-visual.is-typing::after,
+.announcement-idle-caret .typewriter-visual::after {
   content: "";
   display: inline-block;
   height: 1em;

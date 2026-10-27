@@ -20,6 +20,15 @@ async function start() {
     });
   });
 
+  document.querySelectorAll('.announcement-delete-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const title = form.dataset.announcementTitle || 'cette annonce';
+      if (!window.confirm(`Supprimer l'annonce « ${title} » ?`)) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('.backup-restore-form').forEach((form) => {
     form.addEventListener('submit', (event) => {
       if (!window.confirm('Cette restauration remplacera toutes les données et invalidera les sessions des profils. Continuer ?')) {
