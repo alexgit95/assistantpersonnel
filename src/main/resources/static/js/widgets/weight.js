@@ -1,5 +1,6 @@
 import { api, ApiError } from '../api.js';
 import { typeText } from '../typewriter.js';
+import { startRetypeLoop } from '../retype.js';
 
 const CHART_PAGE_SIZE = 6;
 const RECENT_MEASURE_COUNT = 3;
@@ -34,12 +35,12 @@ export function chartCoordinates(entries) {
   });
 }
 
-function drawChart(svg, labelLayer, entries) {
+function drawChart(svg, labelLayer, entries, replay = false) {
   const plotted = chartCoordinates(entries);
   const line = svg.querySelector('[data-weight-line]');
   const pointsGroup = svg.querySelector('[data-weight-points]');
   const signature = plotted.map(({ entry }) => `${entry.entryDate}:${entry.kgTenths}`).join('|');
-  if (svg.dataset.signature === signature) return;
+  if (svg.dataset.signature === signature && !replay) return;
   svg.dataset.signature = signature;
   pointsGroup.replaceChildren();
   labelLayer.replaceChildren();
@@ -117,13 +118,14 @@ export async function initialize(container, _configJson, typingOptions = {}) {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async ({ periodic = false } = {}) => {
+    const writing = periodic ? { ...typingOptions, restart: true } : typingOptions;
     try {
       const [chartPage, recentPage] = await Promise.all([
         api.weightEntries(0, CHART_PAGE_SIZE),
         api.weightEntries(0, RECENT_MEASURE_COUNT),
       ]);
-      drawChart(chart, chartLabels, chartPage.entries);
+      drawChart(chart, chartLabels, chartPage.entries, periodic);
       history.replaceChildren();
       for (const entry of recentPage.entries) {
         const item = document.createElement('li');
@@ -131,18 +133,18 @@ export async function initialize(container, _configJson, typingOptions = {}) {
         measure.type = 'button';
         measure.className = 'weight-measure';
         measure.setAttribute('aria-label', 'Revenir au graphique');
-        typeText(measure, `${formatDate(entry.entryDate)} · ${formatWeight(entry.kgTenths)}`, typingOptions);
+        typeText(measure, `${formatDate(entry.entryDate)} · ${formatWeight(entry.kgTenths)}`, writing);
         measure.addEventListener('click', () => setFlipped(false));
         item.append(measure);
         history.append(item);
       }
       if (recentPage.entries.length === 0) {
         const item = document.createElement('li');
-        typeText(item, 'Aucune mesure enregistrée.', typingOptions);
+        typeText(item, 'Aucune mesure enregistrée.', writing);
         history.append(item);
       }
     } catch (error) {
-      showError(error);
+      if (!periodic) showError(error);
     }
   };
 
@@ -165,4 +167,11 @@ export async function initialize(container, _configJson, typingOptions = {}) {
   });
 
   await loadData();
+  if (typingOptions.enabled !== false) {
+    startRetypeLoop({
+      run: () => loadData({ periodic: true }),
+      isPaused: () => card.classList.contains('is-flipped') || form.contains(document.activeElement),
+      isActive: () => root.isConnected,
+    });
+  }
 }

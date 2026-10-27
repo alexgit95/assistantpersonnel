@@ -2,6 +2,15 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.3]
+
+### Added
+- Rafraîchissement périodique des widgets météo et poids : module partagé `retype.js` (cycle à délai aléatoire de 15 à 60 s par widget, pause, arrêt). Fonctionnellement, les données sont rechargées et les textes réécrits avec l'animation d'écriture, le tracé du graphique de poids est rejoué et le cycle du poids est suspendu pendant la saisie.
+
+### Changed
+- Version du projet portée à 0.0.3 (`pom.xml`).
+- `nextRetypeDelay` est désormais défini dans `retype.js` (ré-exporté par `announcements.js`).
+
 ## [0.0.2]
 
 ### Added

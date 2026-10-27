@@ -1,9 +1,10 @@
 import { api, ApiError } from '../api.js';
 import { typeText } from '../typewriter.js';
+import { nextRetypeDelay } from '../retype.js';
+
+export { nextRetypeDelay };
 
 const PARIS = 'Europe/Paris';
-const RETYPE_MIN_MS = 15000;
-const RETYPE_MAX_MS = 60000;
 const RELOAD_MS = 60000;
 const MS_PER_SECOND = 1000;
 
@@ -32,10 +33,6 @@ export function countdownProgress(nowMs, startMs, endMs) {
     return 1;
   }
   return Math.min(1, Math.max(0, (nowMs - startMs) / (endMs - startMs)));
-}
-
-export function nextRetypeDelay(random = Math.random) {
-  return RETYPE_MIN_MS + Math.floor(random() * (RETYPE_MAX_MS - RETYPE_MIN_MS + 1));
 }
 
 function parisFields(instantMs) {
