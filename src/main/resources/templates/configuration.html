@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Configuration des widgets</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+</head>
+<body class="configuration-body">
+<header th:replace="~{fragments/profile-header :: header(false)}"></header>
+<main class="configuration-page">
+    <div class="configuration-heading">
+        <h1>Configuration</h1>
+        <a class="icon-button" th:href="@{/}" aria-label="Retour à l’accueil" title="Retour à l’accueil">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+        </a>
+    </div>
+    <p id="configuration-status" role="status" aria-live="polite"></p>
+    <section id="widget-pool" class="widget-pool" aria-label="Widgets et réglages"></section>
+    <section id="configuration-grid" class="dashboard-grid configuration-grid" aria-label="Emplacements des widgets">
+        <section class="widget-slot slot-left-top" data-slot-index="1" aria-label="Emplacement en haut à gauche"></section>
+        <section class="widget-slot slot-left-bottom" data-slot-index="2" aria-label="Emplacement en bas à gauche"></section>
+        <section class="widget-slot slot-main" data-slot-index="0" aria-label="Emplacement principal"></section>
+        <section class="widget-slot slot-right-top" data-slot-index="3" aria-label="Emplacement en haut à droite"></section>
+        <section class="widget-slot slot-right-bottom" data-slot-index="4" aria-label="Emplacement en bas à droite"></section>
+    </section>
+    <button id="save-widget-layout" class="save-widget-layout" type="button">Enregistrer</button>
+</main>
+<script type="module" th:src="@{/js/configuration.js}"></script>
+</body>
+</html>

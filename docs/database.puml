@@ -1,0 +1,54 @@
+@startuml database
+' Schema genere par Hibernate (ddl-auto), compatible SQLite et PostgreSQL.
+hide circle
+skinparam linetype ortho
+
+entity "profile" as profile {
+  * id : bigint <<PK, identity>>
+  --
+  * name : varchar(60)
+  avatar : text  ' data URL image reduite (seule image conservee)
+  * created_at_ms : bigint
+}
+
+entity "face_embedding" as face_embedding {
+  * id : bigint <<PK, identity>>
+  --
+  * profile_id : bigint <<FK>>
+  * embedding_json : text  ' tableau JSON de 128 flottants
+}
+
+entity "profile_app" as profile_app {
+  * id : bigint <<PK, identity>>
+  --
+  * profile_id : bigint <<FK>>
+  * app_key : varchar(64)
+  * position : integer  ' 0-4 = slot fixe, -1 = disponible/non affecte
+  * enabled : boolean
+  * config_json : text  ' configuration JSON portable
+  --
+  UK (profile_id, app_key)
+  ' Slots 0-4 uniques vérifiés par le service ; -1 représente le pool disponible.
+}
+
+entity "weight_entry" as weight_entry {
+  * id : bigint <<PK, identity>>
+  --
+  * profile_id : bigint <<FK>>
+  * entry_date : date
+  * kg_tenths : integer  ' poids en dixiemes de kg
+}
+
+entity "app_session" as app_session {
+  * id : varchar(64) <<PK>>  ' SHA-256 du jeton du cookie
+  --
+  * profile_id : bigint  ' supprimee a la suppression du profil (evenement)
+  * created_at_ms : bigint
+  * expires_at_ms : bigint  ' session glissante
+}
+
+profile ||--o{ face_embedding : "supprime en cascade"
+profile ||--o{ profile_app : "supprime en cascade"
+profile ||--o{ weight_entry : "historique du poids"
+profile ||..o{ app_session : "invalide par evenement"
+@enduml

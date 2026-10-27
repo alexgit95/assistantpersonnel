@@ -1,0 +1,112 @@
+# Stack Portainer : coller ce fichier dans Web editor et renseigner les variables d'environnement.
+name: assistant
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTP_PORT:-80}:80"
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    mem_limit: 64m
+
+  app:
+    image: ${APP_IMAGE:-changeme/assistant:latest}
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      ASSISTANT_FACE_ASSETS_MODE: ${ASSISTANT_FACE_ASSETS_MODE:-local}
+      ASSISTANT_FACE_API_URL: ${ASSISTANT_FACE_API_URL:-/vendor/face-api/face-api.js}
+      ASSISTANT_FACE_MODELS_URL: ${ASSISTANT_FACE_MODELS_URL:-/vendor/face-api/model}
+      ASSISTANT_FACE_WASM_SCRIPT_URL: ${ASSISTANT_FACE_WASM_SCRIPT_URL:-/vendor/face-api/wasm/tf-backend-wasm.js}
+      ASSISTANT_FACE_WASM_URL: ${ASSISTANT_FACE_WASM_URL:-/vendor/face-api/wasm/}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-assistant}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-assistant}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatoire}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:+UseSerialGC -Xmx384m -Xss512k}
+      ASSISTANT_SESSION_DURATION_MINUTES: ${ASSISTANT_SESSION_DURATION_MINUTES:-10}
+      ASSISTANT_SCAN_INTERVAL_DISCONNECTED_MS: ${ASSISTANT_SCAN_INTERVAL_DISCONNECTED_MS:-1000}
+      ASSISTANT_SCAN_INTERVAL_CONNECTED_MS: ${ASSISTANT_SCAN_INTERVAL_CONNECTED_MS:-5000}
+      ASSISTANT_LOGOUT_PAUSE_SECONDS: ${ASSISTANT_LOGOUT_PAUSE_SECONDS:-60}
+      ASSISTANT_MATCH_THRESHOLD: ${ASSISTANT_MATCH_THRESHOLD:-0.55}
+      ASSISTANT_MATCH_MARGIN: ${ASSISTANT_MATCH_MARGIN:-0.05}
+      ASSISTANT_DETECTOR_INPUT_SIZE: ${ASSISTANT_DETECTOR_INPUT_SIZE:-224}
+      ASSISTANT_DETECTOR_MIN_CONFIDENCE: ${ASSISTANT_DETECTOR_MIN_CONFIDENCE:-0.5}
+      ASSISTANT_MIN_FACE_SIZE_PX: ${ASSISTANT_MIN_FACE_SIZE_PX:-80}
+      ASSISTANT_CAMERA_WIDTH: ${ASSISTANT_CAMERA_WIDTH:-640}
+      ASSISTANT_RECOGNITION_BACKEND: ${ASSISTANT_RECOGNITION_BACKEND:-auto}
+      ASSISTANT_RECOGNITION_DEBUG: ${ASSISTANT_RECOGNITION_DEBUG:-false}
+      ASSISTANT_BACKUP_MAX_UPLOAD_MB: ${ASSISTANT_BACKUP_MAX_UPLOAD_MB:-50}
+      ASSISTANT_SWITCH_CONFIRMATIONS: ${ASSISTANT_SWITCH_CONFIRMATIONS:-2}
+      ASSISTANT_HEARTBEAT_MIN_INTERVAL_SECONDS: ${ASSISTANT_HEARTBEAT_MIN_INTERVAL_SECONDS:-30}
+      ASSISTANT_MAX_PROFILES: ${ASSISTANT_MAX_PROFILES:-0}
+      ASSISTANT_ENROLLMENT_MIN_PHOTOS: ${ASSISTANT_ENROLLMENT_MIN_PHOTOS:-5}
+      ASSISTANT_ENROLLMENT_MAX_PHOTOS: ${ASSISTANT_ENROLLMENT_MAX_PHOTOS:-8}
+      ASSISTANT_WEATHER_CACHE_MINUTES: ${ASSISTANT_WEATHER_CACHE_MINUTES:-30}
+      ASSISTANT_WEATHER_FORECAST_DAYS: ${ASSISTANT_WEATHER_FORECAST_DAYS:-5}
+      ASSISTANT_UI_TYPING_ENABLED: ${ASSISTANT_UI_TYPING_ENABLED:-true}
+      ASSISTANT_UI_TYPING_SPEED_MS: ${ASSISTANT_UI_TYPING_SPEED_MS:-25}
+      ASSISTANT_ADMIN_USERNAME: ${ASSISTANT_ADMIN_USERNAME:-admin}
+      ASSISTANT_ADMIN_PASSWORD: ${ASSISTANT_ADMIN_PASSWORD:?ASSISTANT_ADMIN_PASSWORD obligatoire}
+      ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS: ${ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS:-5}
+      ASSISTANT_ADMIN_LOCKOUT_MINUTES: ${ASSISTANT_ADMIN_LOCKOUT_MINUTES:-15}
+      ASSISTANT_ADMIN_SESSION_TIMEOUT: ${ASSISTANT_ADMIN_SESSION_TIMEOUT:-15m}
+      ASSISTANT_CERTIFICATE_ROOT_PATH: ${ASSISTANT_CERTIFICATE_ROOT_PATH:-/caddy-data/caddy/pki/authorities/local/root.crt}
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:-true}
+    volumes:
+      - caddy_data:/caddy-data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+    mem_limit: 512m
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-assistant}
+      POSTGRES_USER: ${POSTGRES_USER:-assistant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatoire}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-assistant} -d ${POSTGRES_DB:-assistant}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+
+configs:
+  caddyfile:
+    content: |
+      {
+        local_certs
+      }
+      http://${ASSISTANT_DOMAIN:-assistant.lan} {
+        @root_certificate path /root.crt
+        handle @root_certificate {
+          reverse_proxy app:8080
+        }
+        handle {
+          redir https://${ASSISTANT_DOMAIN:-assistant.lan}{uri} permanent
+        }
+      }
+      ${ASSISTANT_DOMAIN:-assistant.lan} {
+        tls internal
+        reverse_proxy app:8080
+      }
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db_data:

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administration | Assistant</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<main class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <a class="back-link" data-typewriter th:href="@{/}">Retour à l'accueil</a>
+            <h1 data-typewriter>Profils</h1>
+        </div>
+        <form method="post" th:action="@{/admin/logout}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <button type="submit" data-typewriter>Déconnexion admin</button>
+        </form>
+    </header>
+
+    <p class="notice" role="status" aria-live="polite" th:if="${notice}" data-typewriter th:text="${notice}"></p>
+
+    <section class="backup-tools" aria-labelledby="backup-title">
+        <div>
+            <h2 id="backup-title" data-typewriter>Sauvegarde et restauration</h2>
+            <p class="privacy-note" data-typewriter>Le fichier contient des données personnelles et biométriques. Conservez-le en lieu sûr.</p>
+        </div>
+        <a class="backup-download" data-typewriter th:href="@{/admin/backup}">Télécharger la sauvegarde</a>
+        <form method="post" enctype="multipart/form-data" class="backup-restore-form" th:action="@{/admin/backup}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <input type="hidden" name="confirmed" value="false">
+            <label for="backup-file" data-typewriter>Fichier JSON à restaurer</label>
+            <input id="backup-file" type="file" name="backupFile" accept="application/json,.json" required>
+            <button type="submit" class="danger-button" data-typewriter>Remplacer les données</button>
+        </form>
+    </section>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+            <tr><th data-typewriter>Profil</th><th data-typewriter>Action</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="profile : ${profiles.content}">
+                <td class="profile-cell">
+                    <img th:if="${profile.avatar != null}" th:src="${profile.avatar}"
+                         th:alt="|Photo de ${profile.name}|" width="48" height="48">
+                    <span th:unless="${profile.avatar != null}" class="avatar-placeholder" aria-hidden="true"></span>
+                    <span th:text="${profile.name}" data-typewriter></span>
+                </td>
+                <td>
+                                        <form method="post" class="purge-form" th:attr="data-profile-name=${profile.name}"
+                                                 th:action="@{/admin/profiles/{id}/purge(id=${profile.id})}">
+                                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                                <button class="danger-button" type="submit" data-typewriter>Purger</button>
+                                        </form>
+                </td>
+            </tr>
+            <tr th:if="${profiles.empty}"><td colspan="2" data-typewriter>Aucun profil enregistré.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <nav class="pagination" aria-label="Pagination des profils" th:if="${profiles.totalPages > 1}">
+        <a data-typewriter th:if="${profiles.hasPrevious()}" th:href="@{/admin(page=${profiles.number - 1})}">Précédent</a>
+        <span data-typewriter th:text="|Page ${profiles.number + 1} sur ${profiles.totalPages}|">Page 1</span>
+        <a data-typewriter th:if="${profiles.hasNext()}" th:href="@{/admin(page=${profiles.number + 1})}">Suivant</a>
+    </nav>
+    <p class="privacy-note" data-typewriter>L’administration peut voir le nom et l’avatar, mais pas les données des profils.</p>
+</main>
+<script type="module" th:src="@{/js/admin.js}"></script>
+</body>
+</html>

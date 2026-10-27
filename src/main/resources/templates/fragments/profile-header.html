@@ -1,0 +1,41 @@
+<header th:fragment="header(withCamera)" class="identity">
+    <div class="identity-main">
+        <time id="clock" class="home-clock" aria-label="Heure locale">--:--</time>
+        <div class="webcam-frame" th:if="${withCamera}" aria-label="Retour webcam">
+            <video id="camera" autoplay muted playsinline aria-label="Retour webcam"></video>
+            <span class="webcam-letter" aria-hidden="true">W</span>
+        </div>
+        <div class="who">
+            <p id="greeting" aria-live="polite"></p>
+            <p id="status" role="status" aria-live="polite"></p>
+            <p id="timer" hidden></p>
+            <section id="asset-loading" aria-live="polite" aria-label="Chargement des modèles de reconnaissance" th:if="${withCamera}" hidden>
+                <p id="asset-loading-label" data-typewriter>Préparation de la reconnaissance…</p>
+                <progress id="asset-progress" max="100" value="0">0%</progress>
+                <output id="asset-percent">0%</output>
+            </section>
+        </div>
+    </div>
+    <div class="profile-menu">
+        <button id="profile-menu-trigger" class="profile-avatar-button" type="button"
+                aria-label="Ouvrir le menu du profil" aria-haspopup="true" aria-expanded="false"
+                aria-controls="profile-menu" title="Menu du profil">
+            <img id="avatar" alt="" width="48" height="48" hidden>
+            <span id="avatar-fallback" class="avatar-fallback" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <circle cx="12" cy="8" r="3.5"></circle>
+                    <path d="M5 20a7 7 0 0 1 14 0"></path>
+                </svg>
+            </span>
+        </button>
+        <nav id="profile-menu" class="profile-menu-panel" aria-label="Menu du profil" hidden>
+            <a id="menu-configuration" role="menuitem" th:href="@{/configuration}" hidden>Configuration</a>
+            <a id="create-profile" role="menuitem" th:href="@{/enroll}">Créer un profil</a>
+            <p id="unrecognized-help" role="note" hidden>Pas reconnu ? Demandez à l'administrateur de purger l'ancien profil.</p>
+            <a role="menuitem" th:href="@{/certificat}">Certificat HTTPS</a>
+            <a role="menuitem" th:href="@{/admin}">Administration</a>
+            <a id="recapture-profile" role="menuitem" th:href="@{/enroll(mode='recapture')}" hidden>Refaire mes captures</a>
+            <button id="logout" type="button" role="menuitem" hidden>Déconnexion</button>
+        </nav>
+    </div>
+</header>

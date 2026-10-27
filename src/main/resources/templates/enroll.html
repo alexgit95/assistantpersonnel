@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Créer un profil | Assistant</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <link rel="stylesheet" th:href="@{/css/enrollment.css}">
+</head>
+<body>
+<main class="enrollment-page">
+    <a class="back-link" data-typewriter th:href="@{/}">Retour à l'accueil</a>
+    <h1 id="enroll-title" data-typewriter>Créer un profil</h1>
+    <p id="enroll-status" role="status" aria-live="polite"></p>
+
+    <section id="asset-loading" aria-live="polite" aria-label="Chargement des modèles de reconnaissance" hidden>
+        <p id="asset-loading-label" data-typewriter>Préparation de la reconnaissance…</p>
+        <progress id="asset-progress" max="100" value="0">0%</progress>
+        <output id="asset-percent">0%</output>
+    </section>
+
+    <section id="enrollment-workflow" hidden>
+        <label id="name-field" for="profile-name" data-typewriter>Nom du profil</label>
+        <input id="profile-name" name="name" type="text" maxlength="60" autocomplete="name" required>
+
+        <fieldset id="recapture-options" hidden>
+            <legend data-typewriter>Traitement des nouvelles captures</legend>
+            <label><input type="radio" name="embedding-mode" value="add" checked> <span data-typewriter>Ajouter aux captures existantes</span></label>
+            <label><input type="radio" name="embedding-mode" value="replace"> <span data-typewriter>Remplacer les captures existantes</span></label>
+        </fieldset>
+
+        <video id="enroll-camera" autoplay muted playsinline aria-label="Aperçu de la caméra"></video>
+        <p id="capture-guide" aria-live="polite"></p>
+        <div class="capture-actions">
+            <button id="capture-button" type="button" data-typewriter>Capturer</button>
+            <output id="capture-count">0 / 5 captures</output>
+        </div>
+        <p id="capture-message" role="status" aria-live="polite"></p>
+        <div id="capture-gallery" class="capture-gallery" aria-label="Captures temporaires"></div>
+        <button id="choose-avatar" type="button" data-typewriter disabled>Choisir la photo de profil</button>
+    </section>
+
+    <section id="avatar-step" hidden>
+        <h2 data-typewriter>Choisissez votre photo de profil</h2>
+        <p data-typewriter>Cette image sera conservée avec votre profil. Les autres captures seront supprimées.</p>
+        <div id="avatar-gallery" class="avatar-gallery" role="radiogroup" aria-label="Photo de profil"></div>
+        <div class="capture-actions">
+            <button id="back-to-captures" type="button" data-typewriter>Modifier mes captures</button>
+            <button id="save-profile" type="button" data-typewriter disabled>Créer mon profil</button>
+        </div>
+    </section>
+</main>
+<script type="module" th:src="@{/js/enrollment.js}"></script>
+</body>
+</html>
