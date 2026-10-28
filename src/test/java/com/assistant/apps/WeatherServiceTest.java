@@ -32,7 +32,7 @@ class WeatherServiceTest {
         var properties = new AssistantProperties.Weather(30, 5);
         clock = new MutableClock(Instant.parse("2026-10-27T10:00:00Z"));
         service = new WeatherService(gateway, profileApps, new ObjectMapper(),
-            clock, new AssistantProperties(null, null, null, null, properties, null, null, null));
+            clock, new AssistantProperties(null, null, null, null, properties, null, null, null, null));
     }
 
     @Test

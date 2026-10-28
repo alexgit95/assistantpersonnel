@@ -18,7 +18,7 @@ RUN npm pack "@vladmandic/face-api@${FACE_API_VERSION}" --silent \
     && cp wasm/package/dist/tf-backend-wasm.js out/wasm/ \
     && cp wasm/package/dist/*.wasm out/wasm/ \
     && cp face-api/package/LICENSE out/LICENSE-face-api.txt \
-    && cp wasm/package/LICENSE out/LICENSE-tfjs-backend-wasm.txt
+    && (cp wasm/package/LICENSE* out/LICENSE-tfjs-backend-wasm.txt 2>/dev/null || echo "Apache-2.0 - https://github.com/tensorflow/tfjs" > out/LICENSE-tfjs-backend-wasm.txt)
 
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /build

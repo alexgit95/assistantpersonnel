@@ -423,6 +423,46 @@ class SessionFlowIntegrationTest {
     }
 
     @Test
+    void adminProxyIsSavedWithoutExposingPasswordAndExcludedFromBackup() throws Exception {
+        MockHttpSession admin = adminSession();
+        try {
+            mvc.perform(post("/admin/proxy").session(admin).with(csrf())
+                            .param("enabled", "true").param("url", "http://proxy.lan:3128")
+                            .param("username", "svc").param("password", "secret-proxy-pass")
+                            .param("noProxy", "intranet.local"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", "/admin"));
+            assertThat(jdbcTemplate.queryForObject("select password from proxy_setting", String.class))
+                    .isEqualTo("secret-proxy-pass");
+
+            String page = mvc.perform(get("/admin").session(admin)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(page).contains("http://proxy.lan:3128").contains("Tester la connexion")
+                    .doesNotContain("secret-proxy-pass");
+
+            MvcResult pendingDownload = mvc.perform(get("/admin/backup").session(admin))
+                    .andExpect(request().asyncStarted()).andReturn();
+            byte[] backup = mvc.perform(asyncDispatch(pendingDownload)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            assertThat(new String(backup, java.nio.charset.StandardCharsets.UTF_8))
+                    .doesNotContain("secret-proxy-pass").doesNotContain("proxy_setting");
+
+            MockMultipartFile file = new MockMultipartFile("backupFile", "assistant.json", "application/json", backup);
+            mvc.perform(multipart("/admin/backup").file(file).param("confirmed", "true")
+                            .session(admin).with(csrf()))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select url from proxy_setting", String.class))
+                    .isEqualTo("http://proxy.lan:3128");
+
+            mvc.perform(post("/admin/proxy").with(csrf()).param("url", "http://proxy.lan:3128"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", containsString("/admin/login")));
+        } finally {
+            mvc.perform(post("/admin/proxy").session(admin).with(csrf()).param("enabled", "false"));
+        }
+    }
+
+    @Test
     void backupInsertionFailureRollsBackDeletedRows() throws Exception {
         long profileId = createProfile("Rollback source", 3.8f);
         MockHttpSession admin = adminSession();

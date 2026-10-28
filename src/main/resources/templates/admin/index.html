@@ -37,6 +37,22 @@
         </form>
     </section>
 
+    <section class="proxy-admin" aria-labelledby="proxy-title">
+        <h2 id="proxy-title" data-typewriter>Proxy sortant</h2>
+        <p class="privacy-note" data-typewriter>Appliqué à tous les appels HTTP et HTTPS sortants. Le mot de passe est conservé en clair, n'est jamais réaffiché et n'est pas inclus dans la sauvegarde.</p>
+        <form method="post" class="announcement-form" th:action="@{/admin/proxy}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label class="announcement-check"><input type="checkbox" name="enabled" value="true" th:checked="${proxy.enabled}"> Activer le proxy</label>
+            <label>URL <input type="text" name="url" maxlength="300" placeholder="http://proxy:3128" th:value="${proxy.url}"></label>
+            <label>Utilisateur <input type="text" name="username" maxlength="200" autocomplete="off" th:value="${proxy.username}"></label>
+            <label>Mot de passe <input type="password" name="password" maxlength="200" autocomplete="new-password"
+                                       th:placeholder="${proxy.hasPassword} ? 'Laisser vide pour conserver' : ''"></label>
+            <label>Hôtes exclus <input type="text" name="noProxy" maxlength="500" placeholder="intranet.local, .exemple.fr" th:value="${proxy.noProxy}"></label>
+            <button type="submit" data-typewriter>Enregistrer le proxy</button>
+            <button type="submit" th:formaction="@{/admin/proxy/test}" data-typewriter>Tester la connexion</button>
+        </form>
+    </section>
+
     <section class="announcements-admin" aria-labelledby="announcements-title">
         <h2 id="announcements-title" data-typewriter>Annonces</h2>
         <p class="privacy-note" data-typewriter>Dates en heure de Paris. Les annonces expirées restent listées jusqu'à leur suppression.</p>

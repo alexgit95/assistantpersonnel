@@ -57,6 +57,26 @@ entity "announcement" as announcement {
   ' Donnee globale : aucun lien avec profile.
 }
 
+entity "proxy_setting" as proxy_setting {
+  * id : bigint <<PK>>  ' ligne unique (id = 1)
+  --
+  * enabled : boolean
+  url : varchar(300)
+  username : varchar(200)
+  password : varchar(200)  ' stocke en clair (LAN), jamais reaffiche
+  no_proxy : varchar(500)  ' hotes exclus, separes par des virgules
+  ' Exclu de la sauvegarde admin.
+}
+
+entity "external_api_quota" as external_api_quota {
+  * id : varchar(48) <<PK>>  ' cle naturelle "api:jour", garantit un compteur unique par jour
+  --
+  * api_name : varchar(32)  ' par exemple prim
+  * quota_day : varchar(10)  ' date ISO du jour de Paris
+  * calls : integer  ' appels reserves ce jour-la
+  ' Exclu de la sauvegarde admin ; jours de plus de 7 jours purges.
+}
+
 profile ||--o{ face_embedding : "supprime en cascade"
 profile ||--o{ profile_app : "supprime en cascade"
 profile ||--o{ weight_entry : "historique du poids"

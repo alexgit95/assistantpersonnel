@@ -3,6 +3,8 @@ package com.assistant.admin;
 import com.assistant.announcements.AnnouncementService;
 import com.assistant.common.ApiException;
 import com.assistant.profile.ProfileService;
+import com.assistant.proxy.ProxySettingsService;
+import com.assistant.proxy.ProxySettingsService.ProxyInput;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
@@ -36,12 +38,14 @@ public class AdminController {
     private final ProfileService profileService;
     private final BackupService backupService;
     private final AnnouncementService announcementService;
+    private final ProxySettingsService proxySettingsService;
 
     public AdminController(ProfileService profileService, BackupService backupService,
-                           AnnouncementService announcementService) {
+                           AnnouncementService announcementService, ProxySettingsService proxySettingsService) {
         this.profileService = profileService;
         this.backupService = backupService;
         this.announcementService = announcementService;
+        this.proxySettingsService = proxySettingsService;
     }
 
     @GetMapping("/admin/login")
@@ -123,6 +127,28 @@ public class AdminController {
         return saveAnnouncement(redirectAttributes, "Annonce supprimée.", () -> announcementService.delete(id));
     }
 
+    @PostMapping("/admin/proxy")
+    public String saveProxy(@RequestParam(defaultValue = "false") boolean enabled,
+                            @RequestParam(defaultValue = "") String url,
+                            @RequestParam(defaultValue = "") String username,
+                            @RequestParam(defaultValue = "") String password,
+                            @RequestParam(defaultValue = "") String noProxy,
+                            RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Proxy enregistré.",
+                () -> proxySettingsService.save(new ProxyInput(enabled, url, username, password, noProxy)));
+    }
+
+    @PostMapping("/admin/proxy/test")
+    public String testProxy(@RequestParam(defaultValue = "") String url,
+                            @RequestParam(defaultValue = "") String username,
+                            @RequestParam(defaultValue = "") String password,
+                            @RequestParam(defaultValue = "") String noProxy,
+                            RedirectAttributes redirectAttributes) {
+        var result = proxySettingsService.test(new ProxyInput(true, url, username, password, noProxy));
+        redirectAttributes.addFlashAttribute("notice", result.message());
+        return "redirect:/admin";
+    }
+
     private String saveAnnouncement(RedirectAttributes redirectAttributes, String successMessage, Runnable action) {
         try {
             action.run();
@@ -150,6 +176,7 @@ public class AdminController {
 
     private void populateIndex(int page, Model model) {
         model.addAttribute("announcements", announcementService.listAll());
+        model.addAttribute("proxy", proxySettingsService.current());
         model.addAttribute("profiles", profileService.listAdminProfiles(
                 PageRequest.of(Math.max(0, page), PAGE_SIZE, Sort.by(Sort.Direction.ASC, "id"))));
     }

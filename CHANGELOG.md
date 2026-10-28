@@ -5,6 +5,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [0.0.3]
 
 ### Added
+- Proxy HTTP/HTTPS sortant configurable depuis `/admin` (URL, identifiants optionnels, hôtes exclus, activation) et appliqué à chaud à tous les appels sortants ; bouton « Tester la connexion » sans enregistrement ni consommation du budget PRIM. Le mot de passe est stocké en clair (LAN), jamais réaffiché, et les réglages sont exclus de la sauvegarde (nouvelle table `proxy_setting`).
+- Fondations PRIM : budget journalier d'appels persisté (table `external_api_quota`, réservation atomique, jour de Paris, exclue de la sauvegarde), fenêtre de pause 22 h à 5 h configurable (`ASSISTANT_PRIM_*`).
+
 - Rafraîchissement périodique des widgets météo et poids : module partagé `retype.js` (cycle à délai aléatoire de 15 à 60 s par widget, pause, arrêt). Fonctionnellement, les données sont rechargées et les textes réécrits avec l'animation d'écriture, le tracé du graphique de poids est rejoué et le cycle du poids est suspendu pendant la saisie.
 
 ### Changed

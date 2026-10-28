@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+import com.assistant.proxy.OutboundHttp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -24,7 +25,7 @@ public class OpenMeteoClient implements WeatherGateway {
     private final RestClient restClient;
 
     public OpenMeteoClient() {
-        HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+        HttpClient httpClient = OutboundHttp.clientBuilder().connectTimeout(Duration.ofSeconds(3)).build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(Duration.ofSeconds(5));
         this.restClient = RestClient.builder().requestFactory(requestFactory).build();

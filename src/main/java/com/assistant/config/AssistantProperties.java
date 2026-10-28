@@ -7,6 +7,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -21,7 +22,21 @@ public record AssistantProperties(
         @Valid @NotNull Weather weather,
         @Valid @NotNull Ui ui,
         @Valid @NotNull Backup backup,
-        @Valid @NotNull FaceAssets faceAssets) {
+        @Valid @NotNull FaceAssets faceAssets,
+        @Valid @NotNull Prim prim) {
+
+    /** Acces PRIM (Ile-de-France Mobilites) : cle, budget journalier d'appels, cache et pause nocturne (heure de Paris). */
+    public record Prim(
+            String apiKey,
+            @Min(1) @Max(800) int dailyBudget,
+            @Min(1) @Max(1440) int cacheMinutes,
+            @NotNull @Pattern(regexp = "^$|([01]\\d|2[0-3]):[0-5]\\d$", message = "Heure attendue au format HH:mm") String pauseFrom,
+            @NotNull @Pattern(regexp = "^$|([01]\\d|2[0-3]):[0-5]\\d$", message = "Heure attendue au format HH:mm") String pauseTo) {
+
+        public boolean configured() {
+            return apiKey != null && !apiKey.isBlank();
+        }
+    }
 
     public record Session(
             @Min(1) @Max(1440) int durationMinutes,

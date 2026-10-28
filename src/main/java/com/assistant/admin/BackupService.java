@@ -1,6 +1,8 @@
 package com.assistant.admin;
 
 import com.assistant.auth.AppSession;
+import com.assistant.proxy.ProxySetting;
+import com.assistant.quota.ExternalApiQuota;
 import com.assistant.config.AssistantProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityManager;
@@ -46,6 +48,8 @@ import tools.jackson.databind.node.ObjectNode;
 public class BackupService {
 
     private static final int FORMAT_VERSION = 1;
+    private static final Set<Class<?>> EXCLUDED_FROM_BACKUP = Set.of(AppSession.class, ProxySetting.class,
+            ExternalApiQuota.class);
     private static final int PAGE_SIZE = 200;
 
     private final EntityManager entityManager;
@@ -302,7 +306,7 @@ public class BackupService {
     private List<EntityModel> orderedModels() {
         List<EntityModel> models = new ArrayList<>();
         for (EntityType<?> entityType : entityManager.getMetamodel().getEntities()) {
-            if (entityType.getJavaType() != AppSession.class) {
+            if (!EXCLUDED_FROM_BACKUP.contains(entityType.getJavaType())) {
                 models.add(createModel(entityType));
             }
         }

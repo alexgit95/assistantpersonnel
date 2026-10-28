@@ -23,6 +23,7 @@ done
 cp wasm/package/dist/*.wasm "$DEST/wasm/"
 cp wasm/package/dist/tf-backend-wasm.js "$DEST/wasm/"
 cp face-api/package/LICENSE "$DEST/LICENSE-face-api.txt"
-cp wasm/package/LICENSE "$DEST/LICENSE-tfjs-backend-wasm.txt"
+cp wasm/package/LICENSE* "$DEST/LICENSE-tfjs-backend-wasm.txt" 2>/dev/null \
+  || echo "Apache-2.0 - https://github.com/tensorflow/tfjs" > "$DEST/LICENSE-tfjs-backend-wasm.txt"
 
 echo "face-api ${FACE_API_VERSION} installe dans ${DEST}"
