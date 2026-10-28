@@ -2,6 +2,8 @@ target/
 .git/
 .github/
 openspec/
-docs/
+docs/*
+!docs/referentiel-des-lignes.json
+!docs/response_info-traffic.json
 *.db
 *.md

@@ -5,6 +5,7 @@ import com.assistant.common.ApiException;
 import com.assistant.profile.ProfileService;
 import com.assistant.proxy.ProxySettingsService;
 import com.assistant.proxy.ProxySettingsService.ProxyInput;
+import com.assistant.integrations.ExternalApiModeService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
@@ -39,13 +40,16 @@ public class AdminController {
     private final BackupService backupService;
     private final AnnouncementService announcementService;
     private final ProxySettingsService proxySettingsService;
+    private final ExternalApiModeService externalApiModeService;
 
     public AdminController(ProfileService profileService, BackupService backupService,
-                           AnnouncementService announcementService, ProxySettingsService proxySettingsService) {
+                           AnnouncementService announcementService, ProxySettingsService proxySettingsService,
+                           ExternalApiModeService externalApiModeService) {
         this.profileService = profileService;
         this.backupService = backupService;
         this.announcementService = announcementService;
         this.proxySettingsService = proxySettingsService;
+        this.externalApiModeService = externalApiModeService;
     }
 
     @GetMapping("/admin/login")
@@ -149,6 +153,16 @@ public class AdminController {
         return "redirect:/admin";
     }
 
+    @PostMapping("/admin/external-api-mode")
+    public String updateExternalApiMode(@RequestParam(defaultValue = "false") boolean testMode,
+                                        RedirectAttributes redirectAttributes) {
+        externalApiModeService.setTestMode(testMode);
+        redirectAttributes.addFlashAttribute("notice", testMode
+                ? "Mode TEST activé : les réponses des API externes sont simulées."
+                : "Mode réel activé : les API externes sont utilisées.");
+        return "redirect:/admin";
+    }
+
     private String saveAnnouncement(RedirectAttributes redirectAttributes, String successMessage, Runnable action) {
         try {
             action.run();
@@ -177,6 +191,7 @@ public class AdminController {
     private void populateIndex(int page, Model model) {
         model.addAttribute("announcements", announcementService.listAll());
         model.addAttribute("proxy", proxySettingsService.current());
+        model.addAttribute("testMode", externalApiModeService.isTestMode());
         model.addAttribute("profiles", profileService.listAdminProfiles(
                 PageRequest.of(Math.max(0, page), PAGE_SIZE, Sort.by(Sort.Direction.ASC, "id"))));
     }

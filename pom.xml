@@ -13,7 +13,7 @@
 
     <groupId>com.assistant</groupId>
     <artifactId>assistant</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <name>assistant</name>
     <description>Assistant personnel avec reconnaissance faciale cote navigateur</description>
 
@@ -89,6 +89,19 @@
 
     <build>
         <finalName>app</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>docs</directory>
+                <targetPath>integration</targetPath>
+                <includes>
+                    <include>referentiel-des-lignes.json</include>
+                    <include>response_info-traffic.json</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

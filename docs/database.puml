@@ -68,6 +68,13 @@ entity "proxy_setting" as proxy_setting {
   ' Exclu de la sauvegarde admin.
 }
 
+entity "external_api_mode" as external_api_mode {
+  * id : bigint <<PK>>  ' ligne unique (id = 1)
+  --
+  * test_mode : boolean  ' false = réel, true = fixtures locales
+  ' Exclu de la sauvegarde admin.
+}
+
 entity "external_api_quota" as external_api_quota {
   * id : varchar(48) <<PK>>  ' cle naturelle "api:jour", garantit un compteur unique par jour
   --

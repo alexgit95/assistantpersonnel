@@ -89,6 +89,26 @@ class WeatherServiceTest {
         org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location, 5);
     }
 
+        @Test
+        void doesNotReuseTestForecastAfterSwitchingBackToLiveMode() {
+        WeatherLocation location = new WeatherLocation(1, "Lyon", null, "France", 45.75, 4.85);
+        String config = "{\"location\":{\"id\":1,\"name\":\"Lyon\",\"country\":\"France\","
+            + "\"latitude\":45.75,\"longitude\":4.85}}";
+        when(profileApps.requireEnabled(1L, "weather"))
+            .thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
+        when(gateway.isTestMode()).thenReturn(true, false);
+        WeatherForecast simulated = new WeatherForecast(location,
+            new WeatherForecast.CurrentConditions(18, 17, 58, 9, "Éclaircies"), List.of(), true);
+        WeatherForecast live = new WeatherForecast(location,
+            new WeatherForecast.CurrentConditions(12, 10, 70, 14, "Pluie"), List.of());
+        when(gateway.forecast(location, 5)).thenReturn(simulated, live);
+
+        assertThat(service.forecast(1L).testMode()).isTrue();
+        assertThat(service.forecast(1L).testMode()).isFalse();
+
+        org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location, 5);
+        }
+
     private static final class MutableClock extends Clock {
         private Instant current;
 

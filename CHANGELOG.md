@@ -2,11 +2,12 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
-## [0.0.3]
+## [0.0.4]
 
 ### Added
 - Proxy HTTP/HTTPS sortant configurable depuis `/admin` (URL, identifiants optionnels, hôtes exclus, activation) et appliqué à chaud à tous les appels sortants ; bouton « Tester la connexion » sans enregistrement ni consommation du budget PRIM. Le mot de passe est stocké en clair (LAN), jamais réaffiché, et les réglages sont exclus de la sauvegarde (nouvelle table `proxy_setting`).
 - Fondations PRIM : budget journalier d'appels persisté (table `external_api_quota`, réservation atomique, jour de Paris, exclue de la sauvegarde), fenêtre de pause 22 h à 5 h configurable (`ASSISTANT_PRIM_*`).
+- Widget Transports : jusqu'à quatre lignes IDFM favorites par profil, catalogue local embarqué, alertes PRIM globales filtrées par ligne et actualisées toutes les 10 minutes entre 5 h et 22 h, avec horodatage et budget persistant. Les alertes sont mises en avant selon leur sévérité et leur champ `message` est consultable sans exécuter le HTML fournisseur. Le mode TEST admin sert les fixtures locales pour PRIM et la météo sans appel externe; titre, résumé et détails se réécrivent aléatoirement toutes les 15 à 60 s avec un curseur clignotant.
 
 - Rafraîchissement périodique des widgets météo et poids : module partagé `retype.js` (cycle à délai aléatoire de 15 à 60 s par widget, pause, arrêt). Fonctionnellement, les données sont rechargées et les textes réécrits avec l'animation d'écriture, le tracé du graphique de poids est rejoué et le cycle du poids est suspendu pendant la saisie.
 

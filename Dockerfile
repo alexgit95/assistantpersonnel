@@ -26,6 +26,8 @@ COPY .mvn .mvn
 COPY mvnw pom.xml ./
 RUN chmod +x mvnw && ./mvnw -B -q dependency:go-offline
 COPY src src
+COPY docs/referentiel-des-lignes.json docs/referentiel-des-lignes.json
+COPY docs/response_info-traffic.json docs/response_info-traffic.json
 COPY --from=face-assets /assets/out/ /build/src/main/resources/static/vendor/face-api/
 RUN ./mvnw -B -q -DskipTests package
 

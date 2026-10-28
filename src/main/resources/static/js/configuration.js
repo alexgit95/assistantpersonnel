@@ -84,6 +84,9 @@ function createWidgetCard(app) {
   if (app.key === 'weather') {
     appendWeatherConfiguration(card, app);
   }
+  if (app.key === 'transit') {
+    appendTransitConfiguration(card, app);
+  }
 
   card.addEventListener('dragstart', (event) => {
     if (event.target.closest('input, select, button, textarea')) {
@@ -179,6 +182,140 @@ async function saveWeatherCity(app, city, input, result) {
   } catch (error) {
     result.textContent = error instanceof ApiError ? error.message : 'Enregistrement impossible.';
   }
+}
+
+function appendTransitConfiguration(card, app) {
+  const form = document.createElement('form');
+  form.className = 'transit-config';
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.maxLength = 100;
+  input.placeholder = 'RER A, Ligne J, Métro 1…';
+  input.setAttribute('aria-label', 'Rechercher une ligne de transport');
+  const search = document.createElement('button');
+  search.type = 'submit';
+  search.textContent = 'Rechercher';
+  form.append(input, search);
+
+  const result = document.createElement('p');
+  result.className = 'transit-config-status';
+  result.setAttribute('role', 'status');
+  result.setAttribute('aria-live', 'polite');
+  const results = document.createElement('ul');
+  results.className = 'transit-config-results';
+  const favorites = document.createElement('ul');
+  favorites.className = 'transit-config-favorites';
+  favorites.setAttribute('aria-label', 'Lignes favorites');
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.textContent = 'Enregistrer les lignes';
+
+  let selected = [];
+  const labels = new Map();
+  try {
+    const savedIds = JSON.parse(app.configJson || '{}').favoriteLineIds;
+    selected = Array.isArray(savedIds) ? savedIds.filter((id) => typeof id === 'string').slice(0, 4) : [];
+  } catch {
+    selected = [];
+  }
+
+  const renderFavorites = () => {
+    favorites.replaceChildren();
+    selected.forEach((id) => {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = labels.get(id) || id;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', `Retirer ${name.textContent}`);
+      remove.textContent = 'Retirer';
+      remove.addEventListener('click', () => {
+        selected = selected.filter((lineId) => lineId !== id);
+        renderFavorites();
+      });
+      item.append(name, remove);
+      favorites.append(item);
+    });
+    results.querySelectorAll('input[type="checkbox"]').forEach((choice) => {
+      choice.checked = selected.includes(choice.value);
+      choice.disabled = !choice.checked && selected.length >= 4;
+    });
+    result.textContent = `${selected.length} ligne${selected.length === 1 ? '' : 's'} sélectionnée${selected.length === 1 ? '' : 's'} sur 4.`;
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    results.replaceChildren();
+    const query = input.value.trim();
+    if (!query) {
+      result.textContent = 'Saisissez un nom de ligne.';
+      return;
+    }
+    try {
+      const lines = await api.transitLines(query);
+      if (lines.length === 0) {
+        result.textContent = 'Aucune ligne trouvée.';
+        return;
+      }
+      for (const line of lines) {
+        labels.set(line.id, line.label);
+        const item = document.createElement('li');
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = line.id;
+        checkbox.checked = selected.includes(line.id);
+        checkbox.disabled = !checkbox.checked && selected.length >= 4;
+        checkbox.addEventListener('change', () => {
+          selected = checkbox.checked ? [...selected, line.id] : selected.filter((id) => id !== line.id);
+          renderFavorites();
+          results.querySelectorAll('input[type="checkbox"]').forEach((choice) => {
+            if (!choice.checked) choice.disabled = selected.length >= 4;
+          });
+        });
+        label.append(checkbox, document.createTextNode(` ${line.label} · ${line.transportMode}`));
+        item.append(label);
+        results.append(item);
+      }
+      renderFavorites();
+    } catch (error) {
+      result.textContent = error instanceof ApiError ? error.message : 'Recherche de lignes indisponible.';
+    }
+  });
+
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      const saved = await api.saveTransitFavorites(selected);
+      selected = saved.lineIds;
+      saved.lines.forEach((line) => labels.set(line.id, line.label));
+      let config;
+      try {
+        config = JSON.parse(app.configJson || '{}');
+      } catch {
+        config = {};
+      }
+      app.configJson = JSON.stringify({ ...config, favoriteLineIds: selected });
+      document.dispatchEvent(new CustomEvent('assistant:app-config-updated', {
+        detail: { key: app.key, configJson: app.configJson },
+      }));
+      renderFavorites();
+      result.textContent = 'Lignes favorites enregistrées.';
+    } catch (error) {
+      result.textContent = error instanceof ApiError ? error.message : 'Enregistrement impossible.';
+    } finally {
+      save.disabled = false;
+    }
+  });
+  renderFavorites();
+  api.transitFavorites().then((saved) => {
+    selected = saved.lineIds;
+    saved.lines.forEach((line) => labels.set(line.id, line.label));
+    renderFavorites();
+  }).catch((error) => {
+    result.textContent = error instanceof ApiError ? error.message : 'Lignes favorites indisponibles.';
+  });
+  card.append(form, results, favorites, save, result);
 }
 
 function allowDrop(event) {

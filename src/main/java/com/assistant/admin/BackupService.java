@@ -3,6 +3,7 @@ package com.assistant.admin;
 import com.assistant.auth.AppSession;
 import com.assistant.proxy.ProxySetting;
 import com.assistant.quota.ExternalApiQuota;
+import com.assistant.integrations.ExternalApiMode;
 import com.assistant.config.AssistantProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityManager;
@@ -49,7 +50,7 @@ public class BackupService {
 
     private static final int FORMAT_VERSION = 1;
     private static final Set<Class<?>> EXCLUDED_FROM_BACKUP = Set.of(AppSession.class, ProxySetting.class,
-            ExternalApiQuota.class);
+            ExternalApiQuota.class, ExternalApiMode.class);
     private static final int PAGE_SIZE = 200;
 
     private final EntityManager entityManager;

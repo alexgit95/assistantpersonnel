@@ -53,6 +53,17 @@
         </form>
     </section>
 
+    <section class="proxy-admin" aria-labelledby="external-mode-title">
+        <h2 id="external-mode-title" data-typewriter>Mode des API externes</h2>
+        <p class="privacy-note" data-typewriter th:text="${testMode} ? 'Mode TEST actif' : 'Mode réel actif'">Mode réel actif</p>
+        <p class="privacy-note" data-typewriter>En mode TEST, les appels météo et trafic utilisent des données locales; aucun appel externe ni quota PRIM n'est consommé.</p>
+        <form method="post" class="announcement-form" th:action="@{/admin/external-api-mode}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label class="announcement-check"><input type="checkbox" name="testMode" value="true" th:checked="${testMode}"> Activer le mode TEST</label>
+            <button type="submit" data-typewriter>Enregistrer le mode</button>
+        </form>
+    </section>
+
     <section class="announcements-admin" aria-labelledby="announcements-title">
         <h2 id="announcements-title" data-typewriter>Annonces</h2>
         <p class="privacy-note" data-typewriter>Dates en heure de Paris. Les annonces expirées restent listées jusqu'à leur suppression.</p>

@@ -1,5 +1,6 @@
 <div th:fragment="content" class="weather-widget" data-weather-widget
-     th:attr="data-config-json=${appConfigJson}">
+    th:attr="data-config-json=${appConfigJson},data-test-mode=${testMode}">
+    <p class="external-test-badge" data-external-test-mode hidden>MODE TEST</p>
     <p data-weather-status role="status" aria-live="polite" data-typewriter>Préparation de la météo…</p>
     <section data-weather-current hidden>
         <h3 data-weather-location></h3>

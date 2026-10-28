@@ -59,7 +59,7 @@ ASSISTANT_DOMAIN=assistant.lan
 
 3. Déployer. Ouvrir `https://assistant.lan` (le nom doit résoudre vers le Raspberry Pi : DNS du routeur ou fichier `hosts`).
 
-Le Caddyfile est inclus dans le compose (`configs`), aucun fichier externe n'est nécessaire. Le port HTTP ne sert que `/root.crt` pour permettre l'installation initiale de l'autorité ; toutes les autres requêtes HTTP sont redirigées vers HTTPS. Le build Docker récupère face-api 1.7.15 et tfjs-backend-wasm 4.22.0 et les embarque dans l'image ; les navigateurs du LAN n'ont donc pas besoin d'accéder au CDN.
+Le Caddyfile est inclus dans le compose (`configs`), aucun fichier externe n'est nécessaire. Caddy sert directement `/root.crt` depuis son volume de données en HTTP et HTTPS, sans le faire lire par l'application ; les autres requêtes HTTP sont redirigées vers HTTPS. Le build Docker récupère face-api 1.7.15 et tfjs-backend-wasm 4.22.0 et les embarque dans l'image ; les navigateurs du LAN n'ont donc pas besoin d'accéder au CDN.
 
 ## HTTPS et certificat
 
@@ -100,6 +100,11 @@ Toutes les variables sont facultatives (valeur par défaut) sauf `POSTGRES_PASSW
 | `ASSISTANT_ENROLLMENT_MAX_PHOTOS` | 8 | Captures maximales |
 | `ASSISTANT_WEATHER_CACHE_MINUTES` | 30 | Durée du cache météo |
 | `ASSISTANT_WEATHER_FORECAST_DAYS` | 5 | Jours de prévision |
+| `ASSISTANT_PRIM_API_KEY` | vide | Clé PRIM envoyée uniquement par le serveur |
+| `ASSISTANT_PRIM_DAILY_BUDGET` | 750 | Budget journalier PRIM persisté, inférieur au quota de 800 |
+| `ASSISTANT_PRIM_CACHE_MINUTES` | 10 | Intervalle d'actualisation du flux global PRIM |
+| `ASSISTANT_PRIM_PAUSE_FROM` | 22:00 | Début de la pause PRIM, heure de Paris |
+| `ASSISTANT_PRIM_PAUSE_TO` | 05:00 | Fin de la pause PRIM, heure de Paris |
 | `ASSISTANT_UI_TYPING_ENABLED` | true | Active l'effet d'écriture en direct |
 | `ASSISTANT_UI_TYPING_SPEED_MS` | 25 | Délai entre deux caractères affichés |
 | `ASSISTANT_ADMIN_USERNAME` | admin | Login de l'administrateur (`/admin`) |
@@ -107,7 +112,6 @@ Toutes les variables sont facultatives (valeur par défaut) sauf `POSTGRES_PASSW
 | `ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS` | 5 | Échecs de connexion avant blocage temporaire |
 | `ASSISTANT_ADMIN_LOCKOUT_MINUTES` | 15 | Durée du blocage après trop d'échecs |
 | `ASSISTANT_ADMIN_SESSION_TIMEOUT` | 15m | Durée de la session web administrateur |
-| `ASSISTANT_CERTIFICATE_ROOT_PATH` | `/caddy-data/caddy/pki/authorities/local/root.crt` | Emplacement du certificat racine Caddy monté en lecture seule dans l'application |
 | `SERVER_SERVLET_SESSION_COOKIE_SECURE` | false en local, true dans Docker | Exige HTTPS pour envoyer le cookie de session admin |
 | `ASSISTANT_DOMAIN` | assistant.lan | Nom d'hôte servi par Caddy |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | assistant / assistant / (obligatoire) | Base PostgreSQL |
@@ -162,7 +166,9 @@ La CI GitHub publie une image `linux/arm64` sur Docker Hub : `<utilisateur>/assi
 - Interface : thème commun `theme.css` (fond noir OLED, texte blanc, police, espacements), appliqué à l'accueil, l'enrôlement et l'administration. Les textes apparaissent progressivement ; le texte complet reste accessible, l'animation respecte `prefers-reduced-motion` et s'arrête pour les chaînes longues.
 - Administration : `/admin/login`, identifiant `ASSISTANT_ADMIN_USERNAME` et mot de passe obligatoire (12 caractères minimum) `ASSISTANT_ADMIN_PASSWORD`. Spring Security hache le mot de passe avec BCrypt ; la session admin distincte de la reconnaissance faciale utilise un cookie HttpOnly/SameSite Strict, expire selon `ASSISTANT_ADMIN_SESSION_TIMEOUT` et exige Secure dans Docker. Après `ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS` erreurs, la connexion est bloquée pendant `ASSISTANT_ADMIN_LOCKOUT_MINUTES`. L'administrateur ne voit que noms/avatars et peut purger un profil avec confirmation ; la purge supprime aussi ses empreintes, sessions et données.
 - Accueil sans défilement : l'horloge et l'aperçu webcam « W » restent en haut à gauche, le menu du profil en haut à droite, avec un widget principal et quatre widgets secondaires dans des emplacements fixes. Le poids est la vue principale par défaut ; le graphique affiche les valeurs en kg près des points et se trace progressivement, sauf si `prefers-reduced-motion` est actif. Le clic retourne sa carte pour montrer trois mesures et l'ajout. Les affectations et réglages s'ouvrent depuis le menu de l'avatar, sur `/configuration` ; les widgets se déplacent par glisser-déposer ou avec le sélecteur d'emplacement, puis sont enregistrés pour le profil.
-- Applications initiales : « Suivi du poids » accepte un poids de 20,0 à 400,0 kg avec un chiffre après la virgule ou le point, et permet de modifier/supprimer ses propres mesures via l'API. « Météo » recherche une ville depuis la page `/configuration`, enregistre la sélection dans la configuration du profil et affiche les conditions actuelles et cinq jours de prévisions ; plusieurs résultats sont proposés au choix. Les requêtes météo sont mises en cache 30 minutes par coordonnées, avec une capacité bornée. Une indisponibilité météo n'empêche pas les autres widgets de fonctionner.
+- Applications : « Suivi du poids » accepte un poids de 20,0 à 400,0 kg avec un chiffre après la virgule ou le point, et permet de modifier/supprimer ses propres mesures via l'API. « Météo » recherche une ville depuis `/configuration` et affiche les conditions actuelles et cinq jours de prévisions. Le widget « Transports » permet de choisir jusqu'à quatre lignes favorites IDFM par profil depuis le référentiel local `docs/referentiel-des-lignes.json`; le flux PRIM global est filtré par identifiant de ligne et partagé entre profils. Il est actualisé toutes les 10 minutes entre 5 h et 22 h (heure de Paris), avec affichage de l'heure de dernière actualisation. Les alertes sévères sont mises en avant; leur `message` est consultable en détail comme texte sans exécuter le HTML reçu. Le titre, le résumé et les détails sont réécrits toutes les 15 à 60 secondes. Le compteur journalier PRIM est persisté et borné par `ASSISTANT_PRIM_DAILY_BUDGET`.
+- Mode TEST : l'administrateur peut le basculer depuis `/admin`. Les widgets météo et Transports utilisent alors des réponses locales, notamment `docs/response_info-traffic.json`, sans appel externe ni consommation du quota PRIM. Les widgets affichent un badge MODE TEST. Le proxy HTTP/HTTPS sortant se configure aussi depuis `/admin`; ses réglages et le mode TEST ne sont pas inclus dans les sauvegardes.
+- Les lignes et les alertes affichées par le widget Transports sont réécrites indépendamment toutes les 15 à 60 secondes avec un curseur clignotant. Cette animation respecte le réglage d'écriture et `prefers-reduced-motion`; elle n'ajoute pas d'appel PRIM.
 - Toutes les dates des widgets sont affichées en français (`fr-FR`) et les données de poids comme la ville météo sont filtrées par le profil de la session.
 - Rafraîchissement périodique : chaque widget météo et poids recharge ses données puis ré-écrit ses textes avec l'animation d'écriture, à un intervalle aléatoire de 15 à 60 s propre au widget ; le tracé du graphique de poids est rejoué. Le cycle du poids est suspendu quand la carte est retournée ou qu'un champ de saisie a le focus. Un échec de rechargement conserve l'affichage précédent ; sans animation d'écriture, aucun cycle n'est lancé.
 - Session glissante, bascule automatique vers un autre profil reconnu, bouton Déconnexion (reconnaissance suspendue le temps configuré).

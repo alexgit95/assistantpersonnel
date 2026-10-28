@@ -21,6 +21,8 @@ export async function initialize(container, configJson, typingOptions = {}, { sl
   const now = root.querySelector('[data-weather-now]');
   const days = root.querySelector('[data-weather-days]');
   const configRequired = root.querySelector('[data-weather-config-required]');
+  const testBadge = root.querySelector('[data-external-test-mode]');
+  if (testBadge) testBadge.hidden = root.dataset.testMode !== 'true';
   let config;
 
   try {
@@ -43,6 +45,7 @@ export async function initialize(container, configJson, typingOptions = {}, { sl
     }
     try {
       const forecast = await api.weatherForecast();
+      if (testBadge) testBadge.hidden = !forecast.testMode;
       configRequired.hidden = true;
       current.hidden = false;
       typeText(status, '', typingOptions);

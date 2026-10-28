@@ -51,6 +51,10 @@ export const api = {
   weatherCities: (query) => request('GET', `/api/weather/cities?query=${encodeURIComponent(query)}`),
   saveWeatherLocation: (location) => request('PUT', '/api/weather/location', location),
   weatherForecast: () => request('GET', '/api/weather'),
+  transitLines: (query) => request('GET', `/api/transit/lines?query=${encodeURIComponent(query)}`),
+  transitFavorites: () => request('GET', '/api/transit/favorites'),
+  saveTransitFavorites: (lineIds) => request('PUT', '/api/transit/favorites', { lineIds }),
+  transitAlerts: () => request('GET', '/api/transit/alerts'),
   announcements: () => request('GET', '/api/announcements'),
   createProfile: (name, embeddings, avatar) => request('POST', '/api/profiles', { name, embeddings, avatar }),
   updateEmbeddings: (profileId, embeddings, replace, avatar) => request(

@@ -45,14 +45,17 @@ public class WeatherService {
         if (query == null || query.strip().length() < 2) {
             throw invalid("Saisissez au moins deux caractères pour rechercher une ville.");
         }
-        String normalized = query.strip().toLowerCase(Locale.ROOT);
+        String normalized = (gateway.isTestMode() ? "test:" : "live:") + query.strip().toLowerCase(Locale.ROOT);
         List<WeatherLocation> cached = readLocationCache(normalized);
         if (cached != null) {
             return cached;
         }
         try {
             List<WeatherLocation> results = List.copyOf(gateway.geocode(query.strip()));
-            writeLocationCache(normalized, results);
+            String currentKey = (gateway.isTestMode() ? "test:" : "live:") + query.strip().toLowerCase(Locale.ROOT);
+            if (normalized.equals(currentKey)) {
+                writeLocationCache(normalized, results);
+            }
             return results;
         } catch (WeatherUnavailableException ex) {
             throw unavailable();
@@ -79,14 +82,14 @@ public class WeatherService {
     public WeatherForecast forecast(long profileId) {
         EnabledApp app = profileApps.requireEnabled(profileId, APP_KEY);
         WeatherLocation location = configuredLocation(app.configJson());
-        Coordinates key = new Coordinates(location.latitude(), location.longitude());
+        Coordinates key = new Coordinates(location.latitude(), location.longitude(), gateway.isTestMode());
         WeatherForecast cached = readForecastCache(key);
         if (cached != null) {
             return cached;
         }
         try {
             WeatherForecast forecast = gateway.forecast(location, forecastDays);
-            writeForecastCache(key, forecast);
+            writeForecastCache(new Coordinates(location.latitude(), location.longitude(), forecast.testMode()), forecast);
             return forecast;
         } catch (WeatherUnavailableException ex) {
             throw unavailable();
@@ -172,6 +175,6 @@ public class WeatherService {
     private record CacheEntry<T>(Instant createdAt, T value) {
     }
 
-    private record Coordinates(double latitude, double longitude) {
+    private record Coordinates(double latitude, double longitude, boolean testMode) {
     }
 }

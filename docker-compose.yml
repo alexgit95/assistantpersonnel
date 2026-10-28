@@ -19,7 +19,7 @@ services:
     mem_limit: 64m
 
   app:
-    image: ${APP_IMAGE:-changeme/assistant:latest}
+    image: alexdock95/assistantpersonnel:latest
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
@@ -54,7 +54,7 @@ services:
       ASSISTANT_WEATHER_FORECAST_DAYS: ${ASSISTANT_WEATHER_FORECAST_DAYS:-5}
       ASSISTANT_PRIM_API_KEY: ${ASSISTANT_PRIM_API_KEY:-}
       ASSISTANT_PRIM_DAILY_BUDGET: ${ASSISTANT_PRIM_DAILY_BUDGET:-750}
-      ASSISTANT_PRIM_CACHE_MINUTES: ${ASSISTANT_PRIM_CACHE_MINUTES:-15}
+      ASSISTANT_PRIM_CACHE_MINUTES: ${ASSISTANT_PRIM_CACHE_MINUTES:-10}
       ASSISTANT_PRIM_PAUSE_FROM: ${ASSISTANT_PRIM_PAUSE_FROM:-22:00}
       ASSISTANT_PRIM_PAUSE_TO: ${ASSISTANT_PRIM_PAUSE_TO:-05:00}
       ASSISTANT_UI_TYPING_ENABLED: ${ASSISTANT_UI_TYPING_ENABLED:-true}
@@ -64,10 +64,7 @@ services:
       ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS: ${ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS:-5}
       ASSISTANT_ADMIN_LOCKOUT_MINUTES: ${ASSISTANT_ADMIN_LOCKOUT_MINUTES:-15}
       ASSISTANT_ADMIN_SESSION_TIMEOUT: ${ASSISTANT_ADMIN_SESSION_TIMEOUT:-15m}
-      ASSISTANT_CERTIFICATE_ROOT_PATH: ${ASSISTANT_CERTIFICATE_ROOT_PATH:-/caddy-data/caddy/pki/authorities/local/root.crt}
       SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:-true}
-    volumes:
-      - caddy_data:/caddy-data:ro
     depends_on:
       db:
         condition: service_healthy
@@ -100,7 +97,10 @@ configs:
       http://${ASSISTANT_DOMAIN:-assistant.lan} {
         @root_certificate path /root.crt
         handle @root_certificate {
-          reverse_proxy app:8080
+          root * /data/caddy/pki/authorities/local
+          header Content-Type application/x-x509-ca-cert
+          header Content-Disposition "attachment; filename=root.crt"
+          file_server
         }
         handle {
           redir https://${ASSISTANT_DOMAIN:-assistant.lan}{uri} permanent
@@ -108,7 +108,16 @@ configs:
       }
       ${ASSISTANT_DOMAIN:-assistant.lan} {
         tls internal
-        reverse_proxy app:8080
+        @root_certificate path /root.crt
+        handle @root_certificate {
+          root * /data/caddy/pki/authorities/local
+          header Content-Type application/x-x509-ca-cert
+          header Content-Disposition "attachment; filename=root.crt"
+          file_server
+        }
+        handle {
+          reverse_proxy app:8080
+        }
       }
 
 volumes:

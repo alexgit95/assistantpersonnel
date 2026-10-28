@@ -1,0 +1,7 @@
+<div th:fragment="content" class="transit-widget" data-transit-widget
+    th:attr="data-config-json=${appConfigJson},data-test-mode=${testMode}">
+    <p class="external-test-badge" data-external-test-mode hidden>MODE TEST</p>
+    <p data-transit-status role="status" aria-live="polite">Préparation des alertes trafic…</p>
+    <p class="transit-updated" data-transit-updated></p>
+    <ul class="transit-lines" data-transit-lines></ul>
+</div>

@@ -21,6 +21,8 @@ import com.assistant.apps.AssistantApp;
 import com.assistant.profile.ProfileApp;
 import com.assistant.profile.ProfileAppRepository;
 import com.assistant.profile.ProfileRepository;
+import com.assistant.apps.ProfileAppService;
+import com.assistant.quota.ApiQuotaService;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.UUID;
@@ -88,6 +90,7 @@ class SessionFlowIntegrationTest {
                 registry.add("assistant.admin.max-failed-attempts", () -> "5");
                 registry.add("assistant.admin.lockout-minutes", () -> "1");
                 registry.add("assistant.backup.max-upload-mb", () -> "1");
+                registry.add("assistant.prim.api-key", () -> "");
     }
 
     @Autowired
@@ -102,6 +105,10 @@ class SessionFlowIntegrationTest {
         ProfileAppRepository profileAppRepository;
         @Autowired
         JdbcTemplate jdbcTemplate;
+        @Autowired
+        ProfileAppService profileAppService;
+        @Autowired
+        ApiQuotaService apiQuotaService;
 
     private static String embeddings(int count, float base) {
         return IntStream.range(0, count)
@@ -128,6 +135,17 @@ class SessionFlowIntegrationTest {
                 .andReturn();
         return result.getResponse().getCookie(SessionCookies.NAME);
     }
+
+        private tools.jackson.databind.JsonNode appPreference(Cookie cookie, String key) throws Exception {
+                String body = mvc.perform(get("/api/apps").cookie(cookie))
+                                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                for (var preference : objectMapper.readTree(body)) {
+                        if (key.equals(preference.path("key").asString())) {
+                                return preference;
+                        }
+                }
+                throw new AssertionError("Application introuvable : " + key);
+        }
 
         private MockHttpSession adminSession() throws Exception {
                 MvcResult result = mvc.perform(post("/admin/login").with(csrf())
@@ -561,10 +579,10 @@ class SessionFlowIntegrationTest {
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":[{\"key\":\"sample-widget\",\"enabled\":true,"
                                 + "\"position\":0,\"configJson\":\"{\\\"message\\\":\\\"Alice\\\"}\"}]}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[2].key").value("sample-widget"))
-                .andExpect(jsonPath("$[2].enabled").value(true))
-                .andExpect(jsonPath("$[2].position").value(0));
+                .andExpect(status().isOk());
+        var samplePreference = appPreference(aliceCookie, "sample-widget");
+        assertThat(samplePreference.path("enabled").asBoolean()).isTrue();
+        assertThat(samplePreference.path("position").asInt()).isZero();
 
         mvc.perform(get("/api/apps").cookie(bobCookie))
                 .andExpect(status().isOk())
@@ -584,6 +602,85 @@ class SessionFlowIntegrationTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/apps/sample-widget/fragment").cookie(aliceCookie))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void transitCatalogFavoritesAndTestModeUseTheLocalFixtureWithoutQuota() throws Exception {
+        long alice = createProfile("Transit Alice", -4.4f);
+        long bob = createProfile("Transit Bob", -3.2f);
+        Cookie aliceCookie = login(alice);
+        Cookie bobCookie = login(bob);
+        MockHttpSession admin = adminSession();
+        List<String> favoriteIds = List.of("C01739", "C01742", "C01727", "C01729");
+        try {
+            mvc.perform(get("/api/transit/lines").param("query", "RER A"))
+                    .andExpect(status().isUnauthorized());
+            mvc.perform(get("/api/transit/lines").cookie(aliceCookie).param("query", "RER A"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].id").value("C01742"))
+                    .andExpect(jsonPath("$[0].label").value("RER A"));
+            mvc.perform(get("/api/transit/lines").cookie(aliceCookie).param("query", "Ligne J"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].id").value("C01739"));
+
+            mvc.perform(put("/api/transit/favorites").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(java.util.Map.of("lineIds", favoriteIds))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.lineIds.length()").value(4));
+            mvc.perform(put("/api/transit/favorites").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"lineIds\":[\"C01739\",\"C01742\",\"C01727\",\"C01729\",\"C01730\"]}"))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(put("/api/transit/favorites").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"lineIds\":[\"C01739\",\"C01739\"]}"))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(get("/api/transit/favorites").cookie(aliceCookie))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.lineIds.length()").value(4));
+            mvc.perform(get("/api/transit/favorites").cookie(bobCookie))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.lineIds.length()").value(0));
+            mvc.perform(get("/api/transit/alerts").cookie(bobCookie))
+                    .andExpect(status().isNotFound());
+
+            profileAppService.replaceAll(alice, List.of(
+                    new ProfileAppService.Selection("weight", true, 0, "{}"),
+                    new ProfileAppService.Selection("transit", true, 1,
+                            objectMapper.writeValueAsString(java.util.Map.of("favoriteLineIds", favoriteIds))),
+                    new ProfileAppService.Selection("weather", true, 2, "{}")));
+            mvc.perform(post("/admin/external-api-mode").session(admin).with(csrf()).param("testMode", "true"))
+                    .andExpect(status().is3xxRedirection());
+            mvc.perform(get("/apps/transit/fragment").cookie(aliceCookie))
+                    .andExpect(status().isOk()).andExpect(content().string(containsString("MODE TEST")));
+            mvc.perform(get("/apps/weather/fragment").cookie(aliceCookie))
+                    .andExpect(status().isOk()).andExpect(content().string(containsString("MODE TEST")));
+            mvc.perform(get("/api/weather/cities").cookie(aliceCookie).param("query", "Paris"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("Paris"));
+            mvc.perform(get("/api/transit/alerts").cookie(aliceCookie))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.testMode").value(true))
+                    .andExpect(jsonPath("$.lines.length()").value(4))
+                    .andExpect(jsonPath("$.fetchedAt").isNotEmpty())
+                    .andExpect(jsonPath("$.notice").value(containsString("TEST")));
+            assertThat(apiQuotaService.used("prim")).isZero();
+            assertThat(jdbcTemplate.queryForObject("select test_mode from external_api_mode where id = 1", Boolean.class))
+                    .isTrue();
+
+            MvcResult pendingDownload = mvc.perform(get("/admin/backup").session(admin))
+                    .andExpect(request().asyncStarted()).andReturn();
+            byte[] backup = mvc.perform(asyncDispatch(pendingDownload)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            assertThat(new String(backup, java.nio.charset.StandardCharsets.UTF_8))
+                    .doesNotContain("external_api_mode");
+            MockMultipartFile backupFile = new MockMultipartFile("backupFile", "assistant.json",
+                    "application/json", backup);
+            mvc.perform(multipart("/admin/backup").file(backupFile).param("confirmed", "true")
+                            .session(admin).with(csrf()))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select test_mode from external_api_mode where id = 1", Boolean.class))
+                    .isTrue();
+        } finally {
+            mvc.perform(post("/admin/external-api-mode").session(admin).with(csrf()).param("testMode", "false"));
+        }
     }
 
     @Test
@@ -614,13 +711,11 @@ class SessionFlowIntegrationTest {
         profileAppRepository.save(new ProfileApp(aliceProfile, "weather", 9, true,
                 "{\"location\":{\"name\":\"Lyon\"}}"));
 
-        mvc.perform(get("/api/apps").cookie(aliceCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[2].key").value("weather"))
-                .andExpect(jsonPath("$[2].position").value(0))
-                .andExpect(jsonPath("$[2].configJson").value("{\"location\":{\"name\":\"Lyon\"}}"))
-                .andExpect(jsonPath("$[3].key").value("weight"))
-                .andExpect(jsonPath("$[3].position").value(1));
+        var weatherPreference = appPreference(aliceCookie, "weather");
+        var weightPreference = appPreference(aliceCookie, "weight");
+        assertThat(weatherPreference.path("position").asInt()).isZero();
+        assertThat(weatherPreference.path("configJson").asString()).isEqualTo("{\"location\":{\"name\":\"Lyon\"}}");
+        assertThat(weightPreference.path("position").asInt()).isEqualTo(1);
 
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":["
@@ -628,14 +723,9 @@ class SessionFlowIntegrationTest {
                                 + "{\"key\":\"weather\",\"enabled\":true,\"position\":2,\"configJson\":\"{}\"},"
                                 + "{\"key\":\"weight\",\"enabled\":true,\"position\":4,\"configJson\":\"{}\"}]}"))
                 .andExpect(status().isOk());
-        mvc.perform(get("/api/apps").cookie(aliceCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[2].position").value(2))
-                .andExpect(jsonPath("$[3].position").value(4));
-        mvc.perform(get("/api/apps").cookie(bobCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[3].key").value("weight"))
-                .andExpect(jsonPath("$[3].position").value(0));
+        assertThat(appPreference(aliceCookie, "weather").path("position").asInt()).isEqualTo(2);
+        assertThat(appPreference(aliceCookie, "weight").path("position").asInt()).isEqualTo(4);
+        assertThat(appPreference(bobCookie, "weight").path("position").asInt()).isZero();
 
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":["
@@ -686,10 +776,7 @@ class SessionFlowIntegrationTest {
         long profileId = createProfile("Poids par défaut", 1.7f);
         Cookie cookie = login(profileId);
 
-        mvc.perform(get("/api/apps").cookie(cookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[3].key").value("weight"))
-                .andExpect(jsonPath("$[3].enabled").value(true));
+        assertThat(appPreference(cookie, "weight").path("enabled").asBoolean()).isTrue();
         mvc.perform(get("/apps/weight/fragment").cookie(cookie))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("data-weight-chart")))
