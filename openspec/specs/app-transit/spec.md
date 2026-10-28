@@ -147,15 +147,19 @@ Le widget SHALL afficher la date et l'heure de la dernière actualisation réuss
 - **THEN** les données précédentes restent affichées avec leur horodatage d'origine
 
 ### Requirement: Mode TEST des API externes
-Le système SHALL permettre à l'administrateur d'activer un mode TEST persistant depuis l'administration. Dans ce mode, les appels de données météo et PRIM MUST être remplacés par des réponses locales, dont la réponse PRIM du fichier `docs/response_info-traffic.json`. Aucun appel HTTP externe ni réservation de quota MUST être effectué pour ces réponses simulées. Les interfaces concernées MUST signaler clairement le mode TEST.
+Le système SHALL permettre à l'administrateur d'activer un mode TEST persistant depuis l'administration. Dans ce mode, les appels de données météo MUST utiliser `docs/response-open-meteo.json` et les appels PRIM MUST utiliser `docs/response_info-traffic.json`. La recherche météo MUST toujours retourner Paris depuis le fixture, quel que soit le texte saisi, et les prévisions MUST rester cohérentes avec Paris. Aucun appel HTTP externe ni réservation de quota MUST être effectué pour ces réponses simulées. Les interfaces concernées MUST signaler clairement le mode TEST.
 
-#### Scenario: Mode TEST activé
-- **WHEN** l'administrateur active le mode TEST et qu'un widget demande des données PRIM
-- **THEN** la réponse locale est utilisée sans appel réseau ni incrément du quota
+#### Scenario: Mode TEST météo activé
+- **WHEN** l'administrateur active le mode TEST et qu'un widget météo cherche une ville ou demande une prévision
+- **THEN** Paris et ses prévisions cohérentes avec le fixture sont renvoyés sans appel Open-Meteo, quel que soit le texte recherché
+
+#### Scenario: Mode TEST PRIM activé
+- **WHEN** l'administrateur active le mode TEST et qu'un widget Transports demande des alertes
+- **THEN** la réponse PRIM locale est utilisée sans appel réseau ni réservation de quota
 
 #### Scenario: Référentiel et fixtures dans le JAR
 - **WHEN** l'application est exécutée depuis l'image Docker
-- **THEN** le catalogue des lignes et les réponses de test restent disponibles comme ressources de l'application
+- **THEN** le catalogue des lignes et les deux fixtures météo/PRIM restent disponibles comme ressources de l'application
 
 #### Scenario: Retour au mode réel
 - **WHEN** l'administrateur désactive le mode TEST

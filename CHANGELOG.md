@@ -2,6 +2,14 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.5]
+
+### Added
+- Fixture Open-Meteo `docs/response-open-meteo.json` pour le mode TEST : la recherche renvoie toujours Paris et les prévisions utilisent les données correspondantes, sans appel externe. La ville du profil n'est pas modifiée par le seul basculement du mode.
+
+### Changed
+- Version du projet portée à 0.0.5 (`pom.xml`).
+
 ## [0.0.4]
 
 ### Added

@@ -1,36 +1,57 @@
 package com.assistant.apps;
 
-import java.time.Clock;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
+import java.io.IOException;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class TestWeatherGateway {
 
-    private static final List<WeatherLocation> LOCATIONS = List.of(
-            new WeatherLocation(2988507, "Paris", "Île-de-France", "France", 48.8566, 2.3522),
-            new WeatherLocation(2996944, "Lyon", "Auvergne-Rhône-Alpes", "France", 45.75, 4.85));
+        static final String FIXTURE = "classpath:integration/response-open-meteo.json";
+        private final WeatherLocation location;
+        private final WeatherForecast forecast;
 
-    private final Clock clock;
-
-    public TestWeatherGateway(Clock clock) {
-        this.clock = clock;
+        public TestWeatherGateway(ResourceLoader resources, ObjectMapper objectMapper,
+                                                          WeatherResponseParser responseParser) {
+                try (var input = resources.getResource(FIXTURE).getInputStream()) {
+                        JsonNode fixture = objectMapper.readTree(input);
+                        this.location = location(fixture.path("location"));
+                        List<WeatherLocation> results = responseParser.parseGeocoding(fixture.path("geocodingResponse"));
+                        if (results.size() != 1 || !location.equals(results.getFirst())) {
+                                throw new IllegalStateException("Le fixture Open-Meteo doit contenir uniquement Paris.");
+                        }
+                        this.forecast = responseParser.parseForecast(fixture.path("forecastResponse"), location, true);
+                } catch (IOException exception) {
+                        throw new IllegalStateException("Le fixture Open-Meteo de test est introuvable.", exception);
+                }
     }
 
     public List<WeatherLocation> geocode(String query) {
-        String normalized = query == null ? "" : query.strip().toLowerCase(Locale.ROOT);
-        return LOCATIONS.stream().filter(location -> location.name().toLowerCase(Locale.ROOT).contains(normalized))
-                .toList();
+                return List.of(location);
     }
 
     public WeatherForecast forecast(WeatherLocation location, int forecastDays) {
-        List<WeatherForecast.ForecastDay> days = java.util.stream.IntStream.range(0, forecastDays)
-                .mapToObj(index -> new WeatherForecast.ForecastDay(LocalDate.now(clock).plusDays(index),
-                        12 + index, 18 + index, index % 2 == 0 ? "Éclaircies" : "Ciel dégagé"))
-                .toList();
-        return new WeatherForecast(location,
-                new WeatherForecast.CurrentConditions(18, 17, 58, 9, "Éclaircies"), days);
+                int dayCount = Math.min(Math.max(0, forecastDays), forecast.days().size());
+                return new WeatherForecast(this.location, forecast.current(),
+                                forecast.days().subList(0, dayCount), true);
+        }
+
+        private static WeatherLocation location(JsonNode node) {
+                WeatherLocation location = new WeatherLocation(node.path("id").asLong(), node.path("name").asString(),
+                                text(node, "region"), text(node, "country"), node.path("latitude").asDouble(Double.NaN),
+                                node.path("longitude").asDouble(Double.NaN));
+                if (location.id() < 1 || location.name().isBlank() || location.country() == null
+                                || !Double.isFinite(location.latitude()) || !Double.isFinite(location.longitude())) {
+                        throw new IllegalStateException("La localisation Paris du fixture Open-Meteo est invalide.");
+                }
+                return location;
+        }
+
+        private static String text(JsonNode node, String field) {
+                JsonNode value = node.get(field);
+                return value == null || value.isNull() ? null : value.asString();
     }
 }

@@ -5,5 +5,6 @@ openspec/
 docs/*
 !docs/referentiel-des-lignes.json
 !docs/response_info-traffic.json
+!docs/response-open-meteo.json
 *.db
 *.md

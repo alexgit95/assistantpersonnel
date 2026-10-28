@@ -646,15 +646,26 @@ class SessionFlowIntegrationTest {
                     new ProfileAppService.Selection("weight", true, 0, "{}"),
                     new ProfileAppService.Selection("transit", true, 1,
                             objectMapper.writeValueAsString(java.util.Map.of("favoriteLineIds", favoriteIds))),
-                    new ProfileAppService.Selection("weather", true, 2, "{}")));
+                    new ProfileAppService.Selection("weather", true, 2, objectMapper.writeValueAsString(
+                            java.util.Map.of("location", java.util.Map.of("id", 2996944, "name", "Lyon",
+                                    "region", "Auvergne-Rhône-Alpes", "country", "France",
+                                    "latitude", 45.75, "longitude", 4.85))))));
             mvc.perform(post("/admin/external-api-mode").session(admin).with(csrf()).param("testMode", "true"))
                     .andExpect(status().is3xxRedirection());
             mvc.perform(get("/apps/transit/fragment").cookie(aliceCookie))
                     .andExpect(status().isOk()).andExpect(content().string(containsString("MODE TEST")));
             mvc.perform(get("/apps/weather/fragment").cookie(aliceCookie))
                     .andExpect(status().isOk()).andExpect(content().string(containsString("MODE TEST")));
-            mvc.perform(get("/api/weather/cities").cookie(aliceCookie).param("query", "Paris"))
+            mvc.perform(get("/api/weather/cities").cookie(aliceCookie).param("query", "Tokyo"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("Paris"));
+            mvc.perform(get("/api/weather").cookie(aliceCookie))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.location.name").value("Paris"))
+                    .andExpect(jsonPath("$.testMode").value(true))
+                    .andExpect(jsonPath("$.days.length()").value(5));
+            assertThat(profileAppService.listForProfile(alice).stream()
+                    .filter(app -> "weather".equals(app.key())).findFirst().orElseThrow().configJson())
+                    .contains("Lyon");
             mvc.perform(get("/api/transit/alerts").cookie(aliceCookie))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.testMode").value(true))
