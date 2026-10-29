@@ -1405,10 +1405,41 @@ button {
 }
 
 .news-arrow {
-  min-height: 1.6rem;
-  padding: 0.1rem 0.4rem;
-  font: inherit;
-  font-size: 0.7rem;
+  display: grid;
+  width: 1.75rem;
+  min-height: 0;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--assistant-border-strong);
+  border-radius: var(--assistant-radius);
+  background: var(--assistant-bg);
+  color: var(--assistant-fg);
+}
+
+.news-arrow[hidden] {
+  display: none;
+}
+
+.news-arrow:hover {
+  background: var(--assistant-surface);
+  border-color: var(--assistant-fg);
+}
+
+.news-arrow svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app-widget[data-app-key="news"] > h2 {
+  text-align: center;
 }
 
 .news-entries {

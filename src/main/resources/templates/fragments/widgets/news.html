@@ -3,9 +3,13 @@
     <p class="external-test-badge" data-external-test-mode hidden>MODE TEST</p>
     <p data-news-status role="status" aria-live="polite">Préparation des actualités…</p>
     <div class="news-header" data-news-header hidden>
-        <button type="button" class="news-arrow" data-news-prev aria-label="Catégorie précédente">&#9664;</button>
+        <button type="button" class="news-arrow" data-news-prev aria-label="Catégorie précédente">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
         <h3 class="news-category" data-news-category></h3>
-        <button type="button" class="news-arrow" data-news-next aria-label="Catégorie suivante">&#9654;</button>
+        <button type="button" class="news-arrow" data-news-next aria-label="Catégorie suivante">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
     </div>
     <ul class="news-entries" data-news-entries></ul>
 </div>

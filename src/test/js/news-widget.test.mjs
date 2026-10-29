@@ -196,6 +196,32 @@ test('clicking an expanded entry collapses it and clicking another expands only 
   assert.match(parts.category.textContent, /^Sport/);
 });
 
+test('scrolling restarts the 15 second rotation counter', async () => {
+  const { parts, timers, start } = setup(three);
+  await start();
+
+  await timers.advance(ROTATE_MS - 1);
+  parts.list.listeners.get('scroll')();
+  await timers.advance(ROTATE_MS - 1);
+  assert.match(parts.category.textContent, /^Tech/);
+  await timers.advance(1);
+  assert.match(parts.category.textContent, /^Sport/);
+});
+
+test('scrolling restarts the 20 second collapse counter of an expanded entry', async () => {
+  const { parts, timers, start } = setup(three);
+  await start();
+  const [button, description] = parts.list.children[0].children;
+
+  button.click();
+  await timers.advance(COLLAPSE_MS - 1);
+  parts.list.listeners.get('scroll')();
+  await timers.advance(COLLAPSE_MS - 1);
+  assert.equal(description.hidden, false);
+  await timers.advance(1);
+  assert.equal(description.hidden, true);
+});
+
 test('a single category has no rotation and no arrows', async () => {
   const { parts, timers, start } = setup({ testMode: false, categories: [three.categories[0]] });
   await start();

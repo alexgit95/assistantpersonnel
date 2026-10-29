@@ -71,6 +71,13 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
     scheduleRotation();
   };
 
+  const startCollapseTimer = () => {
+    timers.clear(collapseTimer);
+    collapseTimer = timers.set(() => {
+      if (alive()) closeEntry();
+    }, COLLAPSE_MS);
+  };
+
   const openEntryItem = (entry) => {
     if (openEntry && openEntry !== entry) {
       openEntry.button.setAttribute('aria-expanded', 'false');
@@ -81,10 +88,17 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
     entry.description.hidden = false;
     timers.clear(rotateTimer);
     rotateTimer = null;
-    timers.clear(collapseTimer);
-    collapseTimer = timers.set(() => {
-      if (alive()) closeEntry();
-    }, COLLAPSE_MS);
+    startCollapseTimer();
+  };
+
+  // Un défilement dans le widget compte comme une action : les compteurs repartent de zéro.
+  const onActivity = () => {
+    if (!alive() || categories.length === 0) return;
+    if (openEntry) {
+      startCollapseTimer();
+    } else {
+      scheduleRotation();
+    }
   };
 
   const createEntry = (entry, position) => {
@@ -136,6 +150,9 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
 
   previous.addEventListener('click', () => go(-1));
   next.addEventListener('click', () => go(1));
+  list.addEventListener('scroll', onActivity);
+  root.addEventListener('wheel', onActivity, { passive: true });
+  root.addEventListener('touchmove', onActivity, { passive: true });
 
   const render = (overview) => {
     if (testBadge) testBadge.hidden = !overview.testMode;
