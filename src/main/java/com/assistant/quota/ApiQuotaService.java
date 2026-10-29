@@ -3,7 +3,6 @@ package com.assistant.quota;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 /** Budget journalier d'appels persiste : la reservation est atomique et precede l'appel externe. */
@@ -32,11 +31,7 @@ public class ApiQuotaService {
             // La ligne a pu etre creee par un autre appel entre reserve et find : on retente avant de refuser.
             return repository.reserve(api, day, budget) == 1;
         }
-        try {
-            repository.saveAndFlush(new ExternalApiQuota(api, day, 0));
-        } catch (DataIntegrityViolationException concurrentInsert) {
-            // Un autre appel a cree la ligne du jour entre-temps.
-        }
+        repository.insertIfAbsent(api + ":" + day, api, day);
         repository.deleteBefore(today.minusDays(RETENTION_DAYS).toString());
         return repository.reserve(api, day, budget) == 1;
     }

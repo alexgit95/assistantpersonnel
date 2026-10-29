@@ -16,6 +16,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Un cache de prévision dont le premier jour est passé (heure locale du lieu) est abandonné pour ne pas afficher un « aujourd'hui » périmé.
 - Version du projet portée à 0.0.7 (`pom.xml`).
 
+### Fixed
+- `ApiQuotaService` : la création concurrente de la ligne du jour utilisait `saveAndFlush` (un `merge` JPA, car l'identifiant est assigné) qui pouvait remettre le compteur à 0 et laisser dépasser le budget (10 réservations accordées pour un budget de 5 en CI). Remplacée par un `insert … on conflict do nothing` atomique (SQLite et PostgreSQL).
+
 ## [0.0.6]
 
 ### Added

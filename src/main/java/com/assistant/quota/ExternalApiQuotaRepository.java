@@ -22,4 +22,11 @@ public interface ExternalApiQuotaRepository extends JpaRepository<ExternalApiQuo
     @Modifying
     @Query("delete from ExternalApiQuota q where q.quotaDay < :day")
     int deleteBefore(@Param("day") String day);
+
+    /** Cree la ligne du jour a 0 sans jamais ecraser un compteur existant (compatible SQLite et PostgreSQL). */
+    @Transactional
+    @Modifying
+    @Query(value = "insert into external_api_quota (id, api_name, quota_day, calls) "
+            + "values (:id, :api, :day, 0) on conflict (id) do nothing", nativeQuery = true)
+    int insertIfAbsent(@Param("id") String id, @Param("api") String api, @Param("day") String day);
 }
