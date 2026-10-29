@@ -62,14 +62,15 @@ public class OpenMeteoClient implements WeatherGateway {
     }
 
     @Override
-    public WeatherForecast forecast(WeatherLocation location, int forecastDays) {
+    public WeatherForecast forecast(WeatherLocation location) {
         URI uri = org.springframework.web.util.UriComponentsBuilder
                 .fromUriString("https://api.open-meteo.com/v1/forecast")
                 .queryParam("latitude", location.latitude())
                 .queryParam("longitude", location.longitude())
-                .queryParam("current", "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m")
-                .queryParam("daily", "weather_code,temperature_2m_max,temperature_2m_min")
-                .queryParam("forecast_days", forecastDays)
+                .queryParam("current", "temperature_2m,apparent_temperature,weather_code")
+                .queryParam("hourly", "temperature_2m,weather_code,precipitation_probability,wind_gusts_10m")
+                .queryParam("daily", "precipitation_probability_max,wind_gusts_10m_max")
+                .queryParam("forecast_days", FORECAST_DAYS)
                 .queryParam("timezone", "auto")
                 .build().encode().toUri();
         try {

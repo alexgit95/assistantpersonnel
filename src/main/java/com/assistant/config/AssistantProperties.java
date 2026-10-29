@@ -75,8 +75,7 @@ public record AssistantProperties(
     }
 
     public record Weather(
-            @Min(1) @Max(1440) int cacheMinutes,
-            @Min(1) @Max(14) int forecastDays) {
+            @Min(1) @Max(1440) int cacheMinutes) {
     }
 
     public record Ui(

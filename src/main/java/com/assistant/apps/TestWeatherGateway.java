@@ -33,10 +33,8 @@ public class TestWeatherGateway {
                 return List.of(location);
     }
 
-    public WeatherForecast forecast(WeatherLocation location, int forecastDays) {
-                int dayCount = Math.min(Math.max(0, forecastDays), forecast.days().size());
-                return new WeatherForecast(this.location, forecast.current(),
-                                forecast.days().subList(0, dayCount), true);
+    public WeatherForecast forecast(WeatherLocation location) {
+                return new WeatherForecast(this.location, forecast.current(), forecast.days(), true);
         }
 
         private static WeatherLocation location(JsonNode node) {

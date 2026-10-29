@@ -717,7 +717,10 @@ class SessionFlowIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.location.name").value("Paris"))
                     .andExpect(jsonPath("$.testMode").value(true))
-                    .andExpect(jsonPath("$.days.length()").value(5));
+                    .andExpect(jsonPath("$.days.length()").value(4))
+                    .andExpect(jsonPath("$.days[0].morning.code").value(2))
+                    .andExpect(jsonPath("$.days[2].windAlert").value(true))
+                    .andExpect(jsonPath("$.days[1].advice").value("Prends un parapluie et une veste."));
             assertThat(profileAppService.listForProfile(alice).stream()
                     .filter(app -> "weather".equals(app.key())).findFirst().orElseThrow().configJson())
                     .contains("Lyon");

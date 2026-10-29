@@ -32,10 +32,9 @@ public class ModeAwareWeatherGateway implements WeatherGateway {
     }
 
     @Override
-    public WeatherForecast forecast(WeatherLocation location, int forecastDays) {
+    public WeatherForecast forecast(WeatherLocation location) {
         boolean testMode = mode.isTestMode();
-        WeatherForecast forecast = testMode ? testGateway.forecast(location, forecastDays)
-            : liveGateway.forecast(location, forecastDays);
+        WeatherForecast forecast = testMode ? testGateway.forecast(location) : liveGateway.forecast(location);
         return new WeatherForecast(forecast.location(), forecast.current(), forecast.days(), testMode);
     }
 }

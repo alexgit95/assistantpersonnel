@@ -3,8 +3,27 @@
     <p class="external-test-badge" data-external-test-mode hidden>MODE TEST</p>
     <p data-weather-status role="status" aria-live="polite" data-typewriter>Préparation de la météo…</p>
     <section data-weather-current hidden>
-        <h3 data-weather-location></h3>
-        <p data-weather-now></p>
+        <article class="weather-today">
+            <header class="weather-today-header">
+                <h3 data-weather-location></h3>
+                <p class="weather-date" data-weather-date></p>
+            </header>
+            <p class="weather-now" data-weather-now></p>
+            <div class="weather-parts">
+                <div class="weather-part">
+                    <span class="weather-part-label">Matin</span>
+                    <span class="weather-part-icon" data-weather-icon="morning"></span>
+                    <strong data-weather-temp="morning"></strong>
+                </div>
+                <div class="weather-part">
+                    <span class="weather-part-label">Après-midi</span>
+                    <span class="weather-part-icon" data-weather-icon="afternoon"></span>
+                    <strong data-weather-temp="afternoon"></strong>
+                </div>
+            </div>
+            <p class="weather-rain"><span data-weather-rain></span><span class="weather-wind" data-weather-wind></span></p>
+            <p class="weather-advice" data-weather-advice></p>
+        </article>
         <ul class="weather-days" data-weather-days></ul>
     </section>
     <p class="weather-config-required" data-weather-config-required hidden>Aucune ville configurée.</p>

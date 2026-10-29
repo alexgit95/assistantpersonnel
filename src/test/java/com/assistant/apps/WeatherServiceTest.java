@@ -29,7 +29,7 @@ class WeatherServiceTest {
 
     @BeforeEach
     void setUp() {
-        var properties = new AssistantProperties.Weather(30, 5);
+        var properties = new AssistantProperties.Weather(30);
         clock = new MutableClock(Instant.parse("2026-10-27T10:00:00Z"));
         service = new WeatherService(gateway, profileApps, new ObjectMapper(),
             clock, new AssistantProperties(null, null, null, null, properties, null, null, null, null));
@@ -43,13 +43,13 @@ class WeatherServiceTest {
         when(profileApps.requireEnabled(1L, "weather")).thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
         when(profileApps.requireEnabled(2L, "weather")).thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
         WeatherForecast forecast = new WeatherForecast(location,
-                new WeatherForecast.CurrentConditions(15, 14, 60, 8, "Ciel dégagé"), List.of());
-        when(gateway.forecast(location, 5)).thenReturn(forecast);
+                new WeatherForecast.CurrentConditions(15, 14, "Ciel dégagé"), List.of());
+        when(gateway.forecast(location)).thenReturn(forecast);
 
         assertThat(service.forecast(1L)).isEqualTo(forecast);
         assertThat(service.forecast(2L)).isEqualTo(forecast);
 
-        verify(gateway).forecast(location, 5);
+        verify(gateway).forecast(location);
     }
 
     @Test
@@ -79,15 +79,40 @@ class WeatherServiceTest {
                 + "\"latitude\":45.75,\"longitude\":4.85}}";
         when(profileApps.requireEnabled(1L, "weather"))
                 .thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
-        when(gateway.forecast(location, 5)).thenReturn(new WeatherForecast(location,
-                new WeatherForecast.CurrentConditions(15, 14, 60, 8, "Ciel dégagé"), List.of()));
+        when(gateway.forecast(location)).thenReturn(new WeatherForecast(location,
+                new WeatherForecast.CurrentConditions(15, 14, "Ciel dégagé"), List.of()));
 
         service.forecast(1L);
         clock.advance(Duration.ofMinutes(30));
         service.forecast(1L);
 
-        org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location, 5);
+        org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location);
     }
+
+        @Test
+        void dropsACachedForecastWhoseFirstDayIsBeforeTheLocalToday() {
+        var longCache = new WeatherService(gateway, profileApps, new ObjectMapper(), clock,
+            new AssistantProperties(null, null, null, null, new AssistantProperties.Weather(1440), null, null, null, null));
+        WeatherLocation location = new WeatherLocation(1, "Lyon", null, "France", 45.75, 4.85);
+        String config = "{\"location\":{\"id\":1,\"name\":\"Lyon\",\"country\":\"France\","
+            + "\"latitude\":45.75,\"longitude\":4.85}}";
+        when(profileApps.requireEnabled(1L, "weather"))
+            .thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
+        var part = new WeatherForecast.DayPart(10, 1, "Principalement dégagé");
+        var yesterday = new WeatherForecast.ForecastDay(java.time.LocalDate.parse("2026-10-27"), part, part, 0, 0,
+            false, "Rien de particulier, profite de ta journée.");
+        when(gateway.forecast(location)).thenReturn(new WeatherForecast(location,
+            new WeatherForecast.CurrentConditions(10, 9, "Ciel dégagé"), List.of(yesterday), false, 0));
+
+        longCache.forecast(1L);
+        longCache.forecast(1L);
+        org.mockito.Mockito.verify(gateway).forecast(location);
+
+        clock.advance(Duration.ofHours(14));
+        longCache.forecast(1L);
+
+        org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location);
+        }
 
         @Test
         void doesNotReuseTestForecastAfterSwitchingBackToLiveMode() {
@@ -98,15 +123,15 @@ class WeatherServiceTest {
             .thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
         when(gateway.isTestMode()).thenReturn(true, false);
         WeatherForecast simulated = new WeatherForecast(location,
-            new WeatherForecast.CurrentConditions(18, 17, 58, 9, "Éclaircies"), List.of(), true);
+            new WeatherForecast.CurrentConditions(18, 17, "Éclaircies"), List.of(), true);
         WeatherForecast live = new WeatherForecast(location,
-            new WeatherForecast.CurrentConditions(12, 10, 70, 14, "Pluie"), List.of());
-        when(gateway.forecast(location, 5)).thenReturn(simulated, live);
+            new WeatherForecast.CurrentConditions(12, 10, "Pluie"), List.of());
+        when(gateway.forecast(location)).thenReturn(simulated, live);
 
         assertThat(service.forecast(1L).testMode()).isTrue();
         assertThat(service.forecast(1L).testMode()).isFalse();
 
-        org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location, 5);
+        org.mockito.Mockito.verify(gateway, org.mockito.Mockito.times(2)).forecast(location);
         }
 
     private static final class MutableClock extends Clock {

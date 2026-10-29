@@ -2,6 +2,20 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.7]
+
+### Added
+- Widget Météo repensé : carré pleine largeur pour aujourd'hui (ville, « Maintenant » avec température et ressenti, matin et après-midi avec température et picto, risque de pluie, phrase de conseil) et trois lignes pour les trois jours suivants ; un emplacement secondaire n'affiche que le carré du jour. Le matin (6 h à 12 h, minimum) et l'après-midi (12 h à 18 h, maximum) viennent des prévisions horaires Open-Meteo, avec le code météo le plus sévère de la plage.
+- Pictos SVG monochromes (`/img/weather-icons.svg`) et picto vent pour des rafales de plus de 50 km/h.
+- Phrase de conseil générée côté serveur (`WeatherAdvice`) : parapluie, veste, grand froid, rafales, chaleur, orage, neige.
+- `docs/response-open-meteo.json` étoffé d'un bloc `hourly` sur 4 jours pour le mode TEST.
+
+### Changed
+- **BREAKING** : la durée des prévisions est figée à 4 jours ; `ASSISTANT_WEATHER_FORECAST_DAYS`, `assistant.weather.forecast-days` et le paramètre `forecastDays` des passerelles sont supprimés.
+- `GET /api/weather` : `days[]` expose `morning` et `afternoon` (température, code WMO, description), `rainChancePercent`, `maxGustKmh`, `windAlert` et `advice` ; `current` ne contient plus humidité ni vent ; ajout de `utcOffsetSeconds`.
+- Un cache de prévision dont le premier jour est passé (heure locale du lieu) est abandonné pour ne pas afficher un « aujourd'hui » périmé.
+- Version du projet portée à 0.0.7 (`pom.xml`).
+
 ## [0.0.6]
 
 ### Added

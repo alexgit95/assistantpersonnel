@@ -20,7 +20,7 @@ public final class Fixtures {
                 new AssistantProperties.Scan(1000, 5000),
                 new AssistantProperties.Recognition(0.55, 0.05, 2, 224, 0.5, 80, 640, Backend.AUTO, false),
                 new AssistantProperties.Enrollment(5, 8, maxProfiles),
-                new AssistantProperties.Weather(30, 5),
+                new AssistantProperties.Weather(30),
                 new AssistantProperties.Ui(true, 25),
                 new AssistantProperties.Backup(50),
                 new AssistantProperties.FaceAssets(AssistantProperties.FaceAssetMode.CDN,

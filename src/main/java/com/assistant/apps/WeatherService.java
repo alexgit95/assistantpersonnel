@@ -5,6 +5,8 @@ import com.assistant.common.ApiException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +29,6 @@ public class WeatherService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final Duration cacheTtl;
-    private final int forecastDays;
     private final Map<String, CacheEntry<List<WeatherLocation>>> locationCache = lruCache();
     private final Map<Coordinates, CacheEntry<WeatherForecast>> forecastCache = lruCache();
 
@@ -38,7 +39,6 @@ public class WeatherService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.cacheTtl = Duration.ofMinutes(properties.weather().cacheMinutes());
-        this.forecastDays = properties.weather().forecastDays();
     }
 
     public List<WeatherLocation> searchCities(String query) {
@@ -88,7 +88,7 @@ public class WeatherService {
             return cached;
         }
         try {
-            WeatherForecast forecast = gateway.forecast(location, forecastDays);
+            WeatherForecast forecast = gateway.forecast(location);
             writeForecastCache(new Coordinates(location.latitude(), location.longitude(), forecast.testMode()), forecast);
             return forecast;
         } catch (WeatherUnavailableException ex) {
@@ -139,11 +139,21 @@ public class WeatherService {
 
     private synchronized WeatherForecast readForecastCache(Coordinates key) {
         CacheEntry<WeatherForecast> entry = forecastCache.get(key);
-        if (entry == null || expired(entry)) {
+        if (entry == null || expired(entry) || firstDayPassed(entry.value())) {
             forecastCache.remove(key);
             return null;
         }
         return entry.value();
+    }
+
+    /** Le cache ne doit pas servir un « aujourd'hui » perimé après minuit, heure locale du lieu. */
+    private boolean firstDayPassed(WeatherForecast forecast) {
+        if (forecast.testMode() || forecast.days().isEmpty()) {
+            return false;
+        }
+        LocalDate localToday = clock.instant().plusSeconds(forecast.utcOffsetSeconds())
+                .atZone(ZoneOffset.UTC).toLocalDate();
+        return forecast.days().getFirst().date().isBefore(localToday);
     }
 
     private synchronized void writeForecastCache(Coordinates key, WeatherForecast value) {
