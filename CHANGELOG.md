@@ -14,6 +14,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Version du projet portée à 0.0.6 (`pom.xml`).
 
 ### Fixed
+- `ApiQuotaService.tryReserve` : lors de la première réservation concurrente du jour, un appel pouvait être refusé à tort si un autre créait la ligne du jour entre-temps (budget sous-consommé, test `concurrentReservationsNeverExceedTheBudget` aléatoire en CI). La réservation est retentée avant refus ; le test démarre désormais tous les threads simultanément avec un délai maximal.
 - CSS corrompu de `home.css` (bloc `button` non fermé, règles `.icon-button` éclatées) qui privait le bouton de retour de `/configuration` de sa taille et de sa bordure.
 
 ## [0.0.5]

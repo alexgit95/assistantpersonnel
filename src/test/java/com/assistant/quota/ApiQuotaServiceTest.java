@@ -6,9 +6,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,14 +103,19 @@ class ApiQuotaServiceTest {
         String api = apiName();
         var service = new ApiQuotaService(repository, new MutableClock(instant, ZoneId.of("UTC")));
         ExecutorService executor = Executors.newFixedThreadPool(8);
+        CountDownLatch start = new CountDownLatch(1);
         try {
             List<Future<Boolean>> results = new ArrayList<>();
             for (int i = 0; i < 40; i++) {
-                results.add(executor.submit(() -> service.tryReserve(api, 5)));
+                results.add(executor.submit(() -> {
+                    start.await();
+                    return service.tryReserve(api, 5);
+                }));
             }
+            start.countDown();
             int granted = 0;
             for (Future<Boolean> result : results) {
-                if (result.get()) {
+                if (result.get(30, TimeUnit.SECONDS)) {
                     granted++;
                 }
             }

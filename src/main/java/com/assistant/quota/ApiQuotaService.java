@@ -29,7 +29,8 @@ public class ApiQuotaService {
             return true;
         }
         if (repository.findByApiNameAndQuotaDay(api, day).isPresent()) {
-            return false;
+            // La ligne a pu etre creee par un autre appel entre reserve et find : on retente avant de refuser.
+            return repository.reserve(api, day, budget) == 1;
         }
         try {
             repository.saveAndFlush(new ExternalApiQuota(api, day, 0));
