@@ -116,6 +116,43 @@
         </ul>
     </section>
 
+    <section class="announcements-admin" aria-labelledby="news-title">
+        <h2 id="news-title" data-typewriter>Catégories d'actualités</h2>
+        <p class="privacy-note" data-typewriter>Chaque catégorie pointe vers un flux RSS ou Atom en https. Les adresses locales sont refusées. La position définit l'ordre d'affichage.</p>
+        <form method="post" class="announcement-form" th:action="@{/admin/news-categories}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label>Nom <input type="text" name="name" maxlength="100" required></label>
+            <label>URL du flux <input type="url" name="feedUrl" maxlength="500" placeholder="https://" required></label>
+            <label>Position <input type="number" name="position" min="0" max="10000"></label>
+            <button type="submit" data-typewriter>Ajouter la catégorie</button>
+        </form>
+        <ul class="announcement-list">
+            <li th:each="category : ${newsCategories}" class="announcement-item">
+                <div class="announcement-summary">
+                    <strong th:text="${category.name}"></strong>
+                    <span th:text="|position ${category.position}|"></span>
+                    <span th:text="${category.feedUrl}"></span>
+                </div>
+                <details>
+                    <summary>Modifier</summary>
+                    <form method="post" class="announcement-form" th:action="@{/admin/news-categories/{id}(id=${category.id})}">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <label>Nom <input type="text" name="name" maxlength="100" required th:value="${category.name}"></label>
+                        <label>URL du flux <input type="url" name="feedUrl" maxlength="500" required th:value="${category.feedUrl}"></label>
+                        <label>Position <input type="number" name="position" min="0" max="10000" th:value="${category.position}"></label>
+                        <button type="submit">Enregistrer</button>
+                    </form>
+                </details>
+                <form method="post" class="announcement-delete-form news-category-delete-form" th:attr="data-category-name=${category.name}"
+                      th:action="@{/admin/news-categories/{id}/delete(id=${category.id})}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="danger-button" type="submit">Supprimer</button>
+                </form>
+            </li>
+            <li th:if="${newsCategories.empty}" data-typewriter>Aucune catégorie.</li>
+        </ul>
+    </section>
+
     <div class="table-scroll">
         <table>
             <thead>

@@ -528,6 +528,52 @@ class SessionFlowIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("select count(*) from prim_setting", Integer.class)).isZero();
     }
 
+    @Test
+    void adminNewsCategoriesAreValidatedBackedUpAndClearedByAnOldDump() throws Exception {
+        MockHttpSession admin = adminSession();
+        try {
+            mvc.perform(post("/admin/news-categories").session(admin).with(csrf())
+                            .param("name", "Tech").param("feedUrl", "https://example.org/rss").param("position", "2"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", "/admin"));
+            mvc.perform(post("/admin/news-categories").session(admin).with(csrf())
+                            .param("name", "Local").param("feedUrl", "http://example.org/rss"))
+                    .andExpect(status().is3xxRedirection());
+            mvc.perform(post("/admin/news-categories").session(admin).with(csrf())
+                            .param("name", "Prive").param("feedUrl", "https://192.168.1.10/rss"))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select count(*) from news_category", Integer.class)).isEqualTo(1);
+
+            String page = mvc.perform(get("/admin").session(admin)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(page).contains("Tech").contains("https://example.org/rss");
+
+            MvcResult pendingDownload = mvc.perform(get("/admin/backup").session(admin))
+                    .andExpect(request().asyncStarted()).andReturn();
+            byte[] backup = mvc.perform(asyncDispatch(pendingDownload)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            var json = objectMapper.readTree(backup);
+            assertThat(json.path("tables").path("news_category")).hasSize(1);
+            assertThat(json.path("tables").path("news_category").get(0).path("feedUrl").stringValue())
+                    .isEqualTo("https://example.org/rss");
+
+            jdbcTemplate.update("delete from news_category");
+            restore(admin, backup).andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select count(*) from news_category", Integer.class)).isEqualTo(1);
+
+            ((tools.jackson.databind.node.ObjectNode) json.path("tables")).remove("news_category");
+            restore(admin, objectMapper.writeValueAsBytes(json)).andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select count(*) from news_category", Integer.class)).isZero();
+
+            mvc.perform(post("/admin/news-categories").with(csrf()).param("name", "x")
+                            .param("feedUrl", "https://example.org/rss"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", containsString("/admin/login")));
+        } finally {
+            jdbcTemplate.update("delete from news_category");
+        }
+    }
+
     private org.springframework.test.web.servlet.ResultActions restore(MockHttpSession admin, byte[] content)
             throws Exception {
         MockMultipartFile file = new MockMultipartFile("backupFile", "assistant.json", "application/json", content);
@@ -628,8 +674,8 @@ class SessionFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/api/apps").cookie(aliceCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[1].key").value("sample-widget"))
-                .andExpect(jsonPath("$[1].enabled").value(false));
+                .andExpect(jsonPath("$[?(@.key=='sample-widget')].enabled").value(false))
+                .andExpect(jsonPath("$[?(@.key=='news')].title").value("Actualités"));
 
         mvc.perform(put("/api/apps").cookie(aliceCookie).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"selections\":[{\"key\":\"sample-widget\",\"enabled\":true,"

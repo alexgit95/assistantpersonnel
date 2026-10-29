@@ -2,6 +2,22 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Widget Actualités (clé `news`) : catégories de flux RSS/Atom gérées depuis `/admin` (nom, URL https, position, suppression avec confirmation), choisies par profil depuis `/configuration`. Affichage d'une catégorie à la fois (10 entrées), titres en machine à écrire, description en texte brut dépliable au clic, rotation toutes les 15 s sans action, flèches en boucle, repli automatique d'une entrée après 20 s.
+- API `/api/news/categories`, `/api/news/selection` (GET/PUT) et `/api/news/feed`, documentées Swagger.
+- Table `news_category` (`docs/database.puml`), incluse dans la sauvegarde ; un ancien dump sans cette table reste restaurable.
+- Dépendance Maven `com.rometools:rome` 2.1.0.
+- Mode TEST : actualités factices sans appel réseau.
+
+### Changed
+- Impact technique : récupération des flux via `OutboundHttp` (proxy), `https` uniquement, sans redirection, 1 Mo maximum, adresses locales/privées refusées à chaque appel, cache mémoire de 10 minutes par catégorie avec données périmées servies en cas d'échec.
+- Le test d'intégration du registre des widgets cherche désormais les applications par clé au lieu de leur index.
+
+### Fixed
+- Aucun.
+
 ## [0.0.7]
 
 ### Added

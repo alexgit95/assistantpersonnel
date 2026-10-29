@@ -57,6 +57,16 @@ entity "announcement" as announcement {
   ' Donnee globale : aucun lien avec profile.
 }
 
+entity "news_category" as news_category {
+  * id : bigint <<PK, identity>>
+  --
+  * name : varchar(100)
+  * feed_url : varchar(500)  ' URL https du flux RSS/Atom
+  * position : integer  ' ordre d'affichage et de rotation
+  ' Donnee globale ; les profils la referencent par id dans profile_app.config_json (app news).
+  ' Incluse dans la sauvegarde ; absente d'un ancien dump = aucune categorie.
+}
+
 entity "proxy_setting" as proxy_setting {
   * id : bigint <<PK>>  ' ligne unique (id = 1)
   --

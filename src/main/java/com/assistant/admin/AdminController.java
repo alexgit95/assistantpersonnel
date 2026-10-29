@@ -3,6 +3,7 @@ package com.assistant.admin;
 import com.assistant.announcements.AnnouncementService;
 import com.assistant.apps.transit.PrimKeyService;
 import com.assistant.common.ApiException;
+import com.assistant.news.NewsCategoryService;
 import com.assistant.profile.ProfileService;
 import com.assistant.proxy.ProxySettingsService;
 import com.assistant.proxy.ProxySettingsService.ProxyInput;
@@ -43,16 +44,19 @@ public class AdminController {
     private final ProxySettingsService proxySettingsService;
     private final ExternalApiModeService externalApiModeService;
     private final PrimKeyService primKeyService;
+    private final NewsCategoryService newsCategoryService;
 
     public AdminController(ProfileService profileService, BackupService backupService,
                            AnnouncementService announcementService, ProxySettingsService proxySettingsService,
-                           ExternalApiModeService externalApiModeService, PrimKeyService primKeyService) {
+                           ExternalApiModeService externalApiModeService, PrimKeyService primKeyService,
+                           NewsCategoryService newsCategoryService) {
         this.profileService = profileService;
         this.backupService = backupService;
         this.announcementService = announcementService;
         this.proxySettingsService = proxySettingsService;
         this.externalApiModeService = externalApiModeService;
         this.primKeyService = primKeyService;
+        this.newsCategoryService = newsCategoryService;
     }
 
     @GetMapping("/admin/login")
@@ -173,6 +177,28 @@ public class AdminController {
         return "redirect:/admin";
     }
 
+    @PostMapping("/admin/news-categories")
+    public String createNewsCategory(@RequestParam String name, @RequestParam String feedUrl,
+                                     @RequestParam(required = false) Integer position,
+                                     RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Catégorie créée.",
+                () -> newsCategoryService.create(name, feedUrl, position));
+    }
+
+    @PostMapping("/admin/news-categories/{id}")
+    public String updateNewsCategory(@PathVariable long id, @RequestParam String name,
+                                     @RequestParam String feedUrl,
+                                     @RequestParam(required = false) Integer position,
+                                     RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Catégorie modifiée.",
+                () -> newsCategoryService.update(id, name, feedUrl, position));
+    }
+
+    @PostMapping("/admin/news-categories/{id}/delete")
+    public String deleteNewsCategory(@PathVariable long id, RedirectAttributes redirectAttributes) {
+        return saveAnnouncement(redirectAttributes, "Catégorie supprimée.", () -> newsCategoryService.delete(id));
+    }
+
     @PostMapping("/admin/external-api-mode")
     public String updateExternalApiMode(@RequestParam(defaultValue = "false") boolean testMode,
                                         RedirectAttributes redirectAttributes) {
@@ -210,6 +236,7 @@ public class AdminController {
 
     private void populateIndex(int page, Model model) {
         model.addAttribute("announcements", announcementService.listAll());
+        model.addAttribute("newsCategories", newsCategoryService.listAll());
         model.addAttribute("proxy", proxySettingsService.current());
         model.addAttribute("primConfigured", primKeyService.isConfigured());
         model.addAttribute("testMode", externalApiModeService.isTestMode());

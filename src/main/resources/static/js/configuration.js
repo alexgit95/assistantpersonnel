@@ -87,6 +87,9 @@ function createWidgetCard(app) {
   if (app.key === 'transit') {
     appendTransitConfiguration(card, app);
   }
+  if (app.key === 'news') {
+    appendNewsConfiguration(card, app);
+  }
 
   card.addEventListener('dragstart', (event) => {
     if (event.target.closest('input, select, button, textarea')) {
@@ -316,6 +319,76 @@ function appendTransitConfiguration(card, app) {
     result.textContent = error instanceof ApiError ? error.message : 'Lignes favorites indisponibles.';
   });
   card.append(form, results, favorites, save, result);
+}
+
+function appendNewsConfiguration(card, app) {
+  const result = document.createElement('p');
+  result.className = 'news-config-status';
+  result.setAttribute('role', 'status');
+  result.setAttribute('aria-live', 'polite');
+  const choices = document.createElement('ul');
+  choices.className = 'news-config-categories';
+  choices.setAttribute('aria-label', 'Catégories d\'actualités');
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.textContent = 'Enregistrer les catégories';
+
+  let selected = [];
+  try {
+    const savedIds = JSON.parse(app.configJson || '{}').categoryIds;
+    selected = Array.isArray(savedIds) ? savedIds.filter((id) => Number.isInteger(id)) : [];
+  } catch {
+    selected = [];
+  }
+
+  api.newsCategories().then((categories) => {
+    if (categories.length === 0) {
+      result.textContent = 'Aucune catégorie n\'est disponible pour le moment.';
+      save.disabled = true;
+      return;
+    }
+    for (const category of categories) {
+      const item = document.createElement('li');
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = String(category.id);
+      checkbox.checked = selected.includes(category.id);
+      checkbox.addEventListener('change', () => {
+        selected = checkbox.checked
+          ? [...selected, category.id] : selected.filter((id) => id !== category.id);
+      });
+      label.append(checkbox, document.createTextNode(` ${category.name}`));
+      item.append(label);
+      choices.append(item);
+    }
+  }).catch((error) => {
+    result.textContent = error instanceof ApiError ? error.message : 'Catégories indisponibles.';
+  });
+
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      const saved = await api.saveNewsSelection(selected);
+      selected = saved.categoryIds;
+      let config;
+      try {
+        config = JSON.parse(app.configJson || '{}');
+      } catch {
+        config = {};
+      }
+      app.configJson = JSON.stringify({ ...config, categoryIds: selected });
+      document.dispatchEvent(new CustomEvent('assistant:app-config-updated', {
+        detail: { key: app.key, configJson: app.configJson },
+      }));
+      result.textContent = 'Catégories enregistrées.';
+    } catch (error) {
+      result.textContent = error instanceof ApiError ? error.message : 'Enregistrement impossible.';
+    } finally {
+      save.disabled = false;
+    }
+  });
+  card.append(choices, save, result);
 }
 
 function allowDrop(event) {

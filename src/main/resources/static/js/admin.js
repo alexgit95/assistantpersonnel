@@ -29,6 +29,15 @@ async function start() {
     });
   });
 
+  document.querySelectorAll('.news-category-delete-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const name = form.dataset.categoryName || 'cette catégorie';
+      if (!window.confirm(`Supprimer la catégorie « ${name} » ? Les profils qui l'ont cochée ne l'afficheront plus.`)) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('.backup-restore-form').forEach((form) => {
     form.addEventListener('submit', (event) => {
       if (!window.confirm('Cette restauration remplacera toutes les données et invalidera les sessions des profils. Continuer ?')) {

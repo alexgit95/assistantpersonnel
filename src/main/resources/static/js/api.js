@@ -56,6 +56,10 @@ export const api = {
   saveTransitFavorites: (lineIds) => request('PUT', '/api/transit/favorites', { lineIds }),
   transitAlerts: () => request('GET', '/api/transit/alerts'),
   announcements: () => request('GET', '/api/announcements'),
+  newsCategories: () => request('GET', '/api/news/categories'),
+  newsSelection: () => request('GET', '/api/news/selection'),
+  saveNewsSelection: (categoryIds) => request('PUT', '/api/news/selection', { categoryIds }),
+  newsFeed: () => request('GET', '/api/news/feed'),
   createProfile: (name, embeddings, avatar) => request('POST', '/api/profiles', { name, embeddings, avatar }),
   updateEmbeddings: (profileId, embeddings, replace, avatar) => request(
     'PUT', `/api/profiles/${profileId}/embeddings`, { embeddings, replace, avatar }),
