@@ -2,7 +2,7 @@ import { api, ApiError } from '../api.js';
 import { startRetypeLoop } from '../retype.js';
 import { typeText } from '../typewriter.js';
 
-const REFRESH_MS = 10 * 60 * 1000;
+export const REFRESH_MS = 60 * 1000;
 
 export function formatTransitUpdatedAt(value) {
   if (!value) return '';
@@ -127,6 +127,8 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
   if (testBadge) testBadge.hidden = root.dataset.testMode !== 'true';
   let loops = new Map();
   let refreshTimer = null;
+  let lastSignature = null;
+  const setPoll = dependencies.setInterval ?? ((callback, delay) => window.setInterval(callback, delay));
 
   const dispose = () => {
     window.clearInterval(refreshTimer);
@@ -153,8 +155,13 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
       return;
     }
     try {
-      render(await (dependencies.api ?? api).transitAlerts());
+      const overview = await (dependencies.api ?? api).transitAlerts();
+      const signature = JSON.stringify([overview.fetchedAt, overview.notice, overview.paused]);
+      if (signature === lastSignature) return;
+      lastSignature = signature;
+      render(overview);
     } catch (error) {
+      if (lastSignature !== null) return;
       status.hidden = false;
       typeText(status, error instanceof ApiError ? error.message : 'Les alertes trafic sont momentanément indisponibles.',
         typingOptions);
@@ -162,5 +169,5 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
   };
 
   await load();
-  refreshTimer = window.setInterval(load, REFRESH_MS);
+  refreshTimer = setPoll(load, REFRESH_MS);
 }

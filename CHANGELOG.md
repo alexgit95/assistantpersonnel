@@ -2,6 +2,16 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.9]
+
+### Changed
+- Widget Transports : le navigateur relit le serveur toutes les 60 s (au lieu de 10 min) pour que l'heure de dernière actualisation suive celle du serveur sans recharger la page. La réponse vient du cache serveur : aucun appel PRIM de plus, le rythme reste de 10 minutes au plus.
+- Le widget ne met à jour son affichage (heure, lignes, animation d'écriture) que si l'horodatage, le message d'état ou l'état de pause ont changé ; en cas d'échec d'une relecture, l'affichage et l'heure précédents sont conservés.
+- Version du projet portée à 0.0.9 (`pom.xml`).
+
+### Fixed
+- `TransitService` : l'actualisation planifiée toutes les 10 minutes était souvent ignorée, car le flux précédent, horodaté après la réponse PRIM, avait quelques centaines de millisecondes de moins que l'intervalle. Les gardes d'âge tolèrent désormais 5 secondes d'avance (`SCHEDULE_SLACK`) ; le budget journalier et la pause nocturne s'appliquent toujours.
+
 ## [0.0.8]
 
 ### Added

@@ -33,6 +33,8 @@ public class TransitService {
     private static final String APP_KEY = "transit";
     private static final String QUOTA_KEY = "prim";
     private static final int MAX_FAVORITES = 4;
+    // Un tick à 10 min pile arrive juste avant l'échéance du flux précédent : sans marge, il serait ignoré.
+    static final Duration SCHEDULE_SLACK = Duration.ofSeconds(5);
 
     private final TransitGateway liveGateway;
     private final TransitGateway testGateway;
@@ -66,7 +68,7 @@ public class TransitService {
         this.quietHours = quietHours;
         this.mode = mode;
         this.clock = clock;
-        this.refreshInterval = Duration.ofMinutes(properties.prim().cacheMinutes());
+        this.refreshInterval = Duration.ofMinutes(properties.prim().cacheMinutes()).minus(SCHEDULE_SLACK);
     }
 
     public List<TransitLine> searchLines(String query) {

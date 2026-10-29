@@ -119,6 +119,39 @@ class TransitServiceTest {
     }
 
     @Test
+    void refreshesWithinTheSlackBeforeTheTenMinuteDeadlineButNotBefore() {
+        MutableClock mutableClock = new MutableClock(Instant.parse("2026-10-28T12:00:00Z"));
+        TransitFeed first = new TransitFeed(List.of(), mutableClock.instant());
+        when(liveGateway.fetchDisruptions()).thenReturn(first).thenReturn(first);
+        TransitService timed = new TransitService(liveGateway, testGateway, catalog, profileApps,
+                new ObjectMapper(), properties(), primKey, quota, quietHours, mode, mutableClock);
+
+        timed.alerts(1L);
+        mutableClock.advance(Duration.ofMinutes(9).plusSeconds(54));
+        timed.alerts(1L);
+        verify(liveGateway, org.mockito.Mockito.times(1)).fetchDisruptions();
+
+        mutableClock.advance(Duration.ofSeconds(2));
+        timed.alerts(1L);
+        verify(liveGateway, org.mockito.Mockito.times(2)).fetchDisruptions();
+    }
+
+    @Test
+    void scheduledRefreshRunningSlightlyBeforeTheDeadlineIsNotSkipped() {
+        MutableClock mutableClock = new MutableClock(Instant.parse("2026-10-28T12:00:00Z"));
+        TransitFeed first = new TransitFeed(List.of(), mutableClock.instant());
+        when(liveGateway.fetchDisruptions()).thenReturn(first).thenReturn(first);
+        TransitService timed = new TransitService(liveGateway, testGateway, catalog, profileApps,
+                new ObjectMapper(), properties(), primKey, quota, quietHours, mode, mutableClock);
+
+        timed.alerts(1L);
+        mutableClock.advance(Duration.ofMinutes(9).plusSeconds(58));
+        timed.scheduledRefresh();
+
+        verify(liveGateway, org.mockito.Mockito.times(2)).fetchDisruptions();
+    }
+
+    @Test
     void usesExactTitlePrefixOnlyWhenThereAreNoStructuredSections() {
         TransitDisruption titleOnly = new TransitDisruption("d1", "Ligne J : travaux", "Travaux", "Détails",
             "PERTURBEE", "TRAVAUX", Set.of(), false, List.of());

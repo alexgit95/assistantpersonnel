@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import {
-  formatTransitUpdatedAt, initialize, retypeTransitText,
+  formatTransitUpdatedAt, initialize, REFRESH_MS, retypeTransitText,
 } from '../../main/resources/static/js/widgets/transit.js';
 
 class FakeElement {
@@ -173,6 +173,88 @@ test('renders a line alert and the TEST status without throwing while starting i
   assert.equal(alertCard.children[0].classList.contains('announcement-idle-caret'), true);
   assert.equal(alertCard.children[1].classList.contains('announcement-idle-caret'), true);
   assert.equal(detailsBody.classList.contains('announcement-idle-caret'), true);
+});
+
+function pollingSetup(responses) {
+  setupBrowser(true);
+  const status = new FakeElement();
+  const updated = new FakeElement();
+  const lines = new FakeElement();
+  const root = new FakeElement();
+  root.elements.set('[data-transit-status]', status);
+  root.elements.set('[data-transit-updated]', updated);
+  root.elements.set('[data-transit-lines]', lines);
+  const container = new FakeElement();
+  container.elements.set('[data-transit-widget]', root);
+  const polls = [];
+  let calls = 0;
+  const api = { transitAlerts: async () => {
+    const next = responses[Math.min(calls, responses.length - 1)];
+    calls += 1;
+    if (next instanceof Error) throw next;
+    return next;
+  } };
+  const start = () => initialize(container, '{}', { enabled: false }, {
+    api, setInterval: (callback, delay) => { polls.push({ callback, delay }); return 2; },
+  });
+  return { status, updated, lines, polls, start };
+}
+
+const overviewAt = (fetchedAt, notice = null, paused = false) => ({
+  testMode: false, paused, notice, fetchedAt,
+  lines: [{ line: { id: 'C01739', label: 'Transilien J' }, alerts: [] }],
+});
+
+test('polls the server every 60 seconds', async () => {
+  const { polls, start } = pollingSetup([overviewAt('2026-10-28T14:00:00Z')]);
+
+  await start();
+
+  assert.equal(REFRESH_MS, 60_000);
+  assert.equal(polls[0].delay, 60_000);
+});
+
+test('does nothing when the polled data has not changed', async () => {
+  const same = overviewAt('2026-10-28T14:00:00Z');
+  const { lines, updated, polls, start } = pollingSetup([same, { ...same }]);
+  await start();
+  const firstLine = lines.children[0];
+
+  await polls[0].callback();
+
+  assert.equal(lines.children[0], firstLine);
+  assert.equal(updated.textContent, formatTransitUpdatedAt('2026-10-28T14:00:00Z'));
+});
+
+test('renders again when the timestamp or the status message changes', async () => {
+  const { lines, updated, status, polls, start } = pollingSetup([
+    overviewAt('2026-10-28T14:00:00Z'),
+    overviewAt('2026-10-28T14:10:00Z'),
+    overviewAt('2026-10-28T14:10:00Z', 'Alertes en pause jusqu\'à 5 h.', true),
+  ]);
+  await start();
+  const firstLine = lines.children[0];
+
+  await polls[0].callback();
+  assert.notEqual(lines.children[0], firstLine);
+  assert.equal(updated.textContent, formatTransitUpdatedAt('2026-10-28T14:10:00Z'));
+
+  await polls[0].callback();
+  assert.equal(status.hidden, false);
+});
+
+test('keeps the previous display and time when a poll fails', async () => {
+  const { lines, updated, status, polls, start } = pollingSetup([
+    overviewAt('2026-10-28T14:00:00Z'), new Error('offline'),
+  ]);
+  await start();
+  const firstLine = lines.children[0];
+
+  await polls[0].callback();
+
+  assert.equal(lines.children[0], firstLine);
+  assert.equal(updated.textContent, formatTransitUpdatedAt('2026-10-28T14:00:00Z'));
+  assert.equal(status.hidden, true);
 });
 
 test('reduced-motion writes once without starting a retype timer', () => {
