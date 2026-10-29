@@ -24,7 +24,7 @@ export function announcementLabel(data) {
     return data.title;
   }
   const end = new Date(data.endsAt);
-  return `${data.title} \u00b7 fin le ${endDateFormat.format(end)} \u00e0 ${endTimeFormat.format(end)}`;
+  return `${data.title} \u00b7 ${endDateFormat.format(end)} \u00e0 ${endTimeFormat.format(end)}`;
 }
 
 /** Avancement entre debut et fin, borne a [0, 1]. */

@@ -90,6 +90,14 @@
   background: var(--assistant-surface);
 }
 
+.avatar-choice .avatar-hex {
+  width: 100%;
+}
+
+.avatar-choice .avatar-hex > img {
+  aspect-ratio: auto;
+}
+
 .capture-card figcaption {
   color: var(--assistant-muted);
 }

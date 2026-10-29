@@ -94,6 +94,31 @@ class TransitServiceTest {
         }
 
     @Test
+    void putsDisruptedLinesFirstAndKeepsTheFavoritesOrderInsideEachGroup() {
+        when(profileApps.requireEnabled(1L, "transit")).thenReturn(new ProfileAppService.EnabledApp(
+                new TransitAssistantApp(), 1, "{\"favoriteLineIds\":[\"C02795\",\"C01739\",\"C01742\"]}"));
+        TransitDisruption onJ = new TransitDisruption("d1", "Ligne J : travaux", "Travaux", "Détails",
+                "PERTURBEE", "TRAVAUX", Set.of("line:IDFM:C01739"), true, List.of());
+        TransitDisruption onRerA = new TransitDisruption("d2", "RER A : panne", "Panne", "Détails",
+                "BLOQUANTE", "PANNE", Set.of("line:IDFM:C01742"), true, List.of());
+        when(liveGateway.fetchDisruptions()).thenReturn(new TransitFeed(List.of(onJ, onRerA), clock.instant()));
+
+        var lines = service.alerts(1L).lines();
+
+        assertThat(lines).extracting(line -> line.line().id()).containsExactly("C01739", "C01742", "C02795");
+    }
+
+    @Test
+    void keepsTheFavoritesOrderWhenNoLineIsDisrupted() {
+        when(profileApps.requireEnabled(1L, "transit")).thenReturn(new ProfileAppService.EnabledApp(
+                new TransitAssistantApp(), 1, "{\"favoriteLineIds\":[\"C02795\",\"C01739\",\"C01742\"]}"));
+        when(liveGateway.fetchDisruptions()).thenReturn(new TransitFeed(List.of(), clock.instant()));
+
+        assertThat(service.alerts(1L).lines()).extracting(line -> line.line().id())
+                .containsExactly("C02795", "C01739", "C01742");
+    }
+
+    @Test
     void usesExactTitlePrefixOnlyWhenThereAreNoStructuredSections() {
         TransitDisruption titleOnly = new TransitDisruption("d1", "Ligne J : travaux", "Travaux", "Détails",
             "PERTURBEE", "TRAVAUX", Set.of(), false, List.of());

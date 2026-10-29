@@ -51,6 +51,42 @@ a {
   outline-offset: 3px;
 }
 
+/* Hexagone régulier côté plat en haut (hauteur = 0,866 × largeur). Le contour est un filtre du parent car clip-path coupe les bordures. */
+.avatar-hex {
+  --hex-outline: var(--assistant-border-strong);
+  display: inline-grid;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 0.866;
+  padding: 0;
+  border: 0;
+  background: none;
+  filter: drop-shadow(1px 0 0 var(--hex-outline)) drop-shadow(-1px 0 0 var(--hex-outline))
+    drop-shadow(0 1px 0 var(--hex-outline)) drop-shadow(0 -1px 0 var(--hex-outline));
+}
+
+.avatar-hex > * {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: var(--assistant-bg);
+  object-fit: cover;
+}
+
+.avatar-hex > [hidden] {
+  display: none;
+}
+
+.avatar-hex:hover {
+  --hex-outline: var(--assistant-fg);
+}
+
+.avatar-hex:focus-visible {
+  --hex-outline: var(--assistant-fg);
+  outline: none;
+}
+
 .screen-reader-only {
   position: absolute;
   width: 1px;

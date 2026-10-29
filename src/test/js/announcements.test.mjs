@@ -17,7 +17,7 @@ test('label shows the Paris end date and time only without countdown', () => {
   const endsAt = at('2026-10-27T17:00:00Z');
 
   assert.equal(announcementLabel({ title: 'Fête', endsAt, countdown: false }),
-    'Fête \u00b7 fin le 27/10/2026 \u00e0 18:00');
+    'Fête \u00b7 27/10/2026 \u00e0 18:00');
   assert.equal(announcementLabel({ title: 'Fête', endsAt, countdown: true }), 'Fête');
 });
 

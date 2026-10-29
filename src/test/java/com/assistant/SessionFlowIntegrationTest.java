@@ -233,6 +233,8 @@ class SessionFlowIntegrationTest {
                 .andExpect(content().string(containsString("id=\"clock\"")))
                 .andExpect(content().string(containsString("id=\"profile-menu-trigger\"")))
                 .andExpect(content().string(containsString("id=\"menu-configuration\"")))
+                .andExpect(content().string(containsString("profile-avatar-button avatar-hex")))
+                .andExpect(content().string(containsString("/admin\"")))
                 .andExpect(content().string(containsString("/enroll")))
                 .andExpect(content().string(containsString("/js/home.js")));
         for (String module : List.of("home", "api", "admin", "camera", "enrollment", "enrollment-policy",
@@ -243,9 +245,12 @@ class SessionFlowIntegrationTest {
                 mvc.perform(get("/js/widgets/weight.js")).andExpect(status().isOk());
                 mvc.perform(get("/js/widgets/weather.js")).andExpect(status().isOk());
                 mvc.perform(get("/js/widgets/announcements.js")).andExpect(status().isOk());
-        mvc.perform(get("/css/theme.css")).andExpect(status().isOk());
+        mvc.perform(get("/css/theme.css")).andExpect(status().isOk())
+                .andExpect(content().string(containsString(".avatar-hex")))
+                .andExpect(content().string(containsString("polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)")));
         mvc.perform(get("/css/home.css"))
                 .andExpect(status().isOk())
+                .andExpect(content().string(containsString(".profile-menu-panel [hidden]")))
                 .andExpect(content().string(containsString(".identity {")))
                 .andExpect(content().string(containsString(".dashboard-grid {")))
                 .andExpect(content().string(containsString(".webcam-frame {")));

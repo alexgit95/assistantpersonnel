@@ -161,9 +161,11 @@
             <tbody>
             <tr th:each="profile : ${profiles.content}">
                 <td class="profile-cell">
-                    <img th:if="${profile.avatar != null}" th:src="${profile.avatar}"
-                         th:alt="|Photo de ${profile.name}|" width="48" height="48">
-                    <span th:unless="${profile.avatar != null}" class="avatar-placeholder" aria-hidden="true"></span>
+                    <span class="avatar-hex profile-avatar">
+                        <img th:if="${profile.avatar != null}" th:src="${profile.avatar}"
+                             th:alt="|Photo de ${profile.name}|" width="48" height="42">
+                        <span th:unless="${profile.avatar != null}" class="avatar-placeholder" aria-hidden="true"></span>
+                    </span>
                     <span th:text="${profile.name}" data-typewriter></span>
                 </td>
                 <td>

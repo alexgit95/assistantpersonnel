@@ -2,7 +2,7 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
-## [Unreleased]
+## [0.0.8]
 
 ### Added
 - Widget Actualités (clé `news`) : catégories de flux RSS/Atom gérées depuis `/admin` (nom, URL https, position, suppression avec confirmation), choisies par profil depuis `/configuration`. Affichage d'une catégorie à la fois (10 entrées), titres en machine à écrire, description en texte brut dépliable au clic, rotation toutes les 15 s sans action, flèches en boucle, repli automatique d'une entrée après 20 s.
@@ -10,13 +10,17 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Table `news_category` (`docs/database.puml`), incluse dans la sauvegarde ; un ancien dump sans cette table reste restaurable.
 - Dépendance Maven `com.rometools:rome` 2.1.0.
 - Mode TEST : actualités factices sans appel réseau.
+- Avatar du profil en hexagone régulier à côté plat en haut (classe `.avatar-hex` dans `theme.css`) : accueil, administration et choix de l'avatar à l'enrôlement ; la silhouette de secours suit la même forme. Le contour est un filtre du parent car `clip-path` coupe les bordures.
 
 ### Changed
+- Widget Transports : les lignes dont le trafic n'est pas normal sont placées en tête (tri stable dans `TransitService.buildLineAlerts`), l'ordre des favoris est conservé dans chaque groupe.
+- Widget Annonces : une annonce sans compte à rebours affiche « titre · jj/mm/aaaa à hh:mm » (date de fin) sans le mot « fin le ».
+- Version du projet portée à 0.0.8 (`pom.xml`).
 - Impact technique : récupération des flux via `OutboundHttp` (proxy), `https` uniquement, sans redirection, 1 Mo maximum, adresses locales/privées refusées à chaque appel, cache mémoire de 10 minutes par catégorie avec données périmées servies en cas d'échec.
 - Le test d'intégration du registre des widgets cherche désormais les applications par clé au lieu de leur index.
 
 ### Fixed
-- Aucun.
+- Menu du profil : l'attribut `hidden` était neutralisé par `display: flex` sur les liens et boutons du menu, de sorte que « Configuration », « Refaire mes captures » et « Déconnexion » s'affichaient sans profil connecté. La règle `.profile-menu-panel [hidden]` les masque à nouveau ; « Administration » reste visible et `/configuration` répond toujours 401 hors session.
 
 ## [0.0.7]
 

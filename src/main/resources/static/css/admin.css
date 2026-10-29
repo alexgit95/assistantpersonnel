@@ -75,18 +75,12 @@ th {
   min-width: 12rem;
 }
 
-.profile-cell img, .avatar-placeholder {
+.profile-avatar {
   width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
-  border: 1px solid var(--assistant-border);
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 .avatar-placeholder {
-  display: inline-block;
-  background: var(--assistant-bg);
+  display: block;
 }
 
 .danger-button {

@@ -213,7 +213,7 @@ public class TransitService {
                             .thenComparing(TransitAlert::title, String.CASE_INSENSITIVE_ORDER))
                     .toList();
             return new LineAlerts(line, alerts);
-        }).toList();
+        }).sorted(Comparator.comparing((LineAlerts lineAlerts) -> lineAlerts.alerts().isEmpty())).toList();
     }
 
     private boolean matches(TransitDisruption disruption, TransitLine line) {

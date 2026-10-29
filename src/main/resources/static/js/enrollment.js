@@ -128,7 +128,10 @@ function renderAvatarChoices() {
     const image = document.createElement('img');
     image.src = capture.avatar;
     image.alt = `Choisir la capture ${index + 1} comme photo de profil`;
-    label.append(radio, image);
+    const frame = document.createElement('span');
+    frame.className = 'avatar-hex';
+    frame.append(image);
+    label.append(radio, frame);
     el['avatar-gallery'].append(label);
   });
   if (avatarIndex < 0 && captures.length > 0) {
