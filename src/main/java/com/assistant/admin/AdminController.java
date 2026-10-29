@@ -1,6 +1,7 @@
 package com.assistant.admin;
 
 import com.assistant.announcements.AnnouncementService;
+import com.assistant.apps.transit.PrimKeyService;
 import com.assistant.common.ApiException;
 import com.assistant.profile.ProfileService;
 import com.assistant.proxy.ProxySettingsService;
@@ -41,15 +42,17 @@ public class AdminController {
     private final AnnouncementService announcementService;
     private final ProxySettingsService proxySettingsService;
     private final ExternalApiModeService externalApiModeService;
+    private final PrimKeyService primKeyService;
 
     public AdminController(ProfileService profileService, BackupService backupService,
                            AnnouncementService announcementService, ProxySettingsService proxySettingsService,
-                           ExternalApiModeService externalApiModeService) {
+                           ExternalApiModeService externalApiModeService, PrimKeyService primKeyService) {
         this.profileService = profileService;
         this.backupService = backupService;
         this.announcementService = announcementService;
         this.proxySettingsService = proxySettingsService;
         this.externalApiModeService = externalApiModeService;
+        this.primKeyService = primKeyService;
     }
 
     @GetMapping("/admin/login")
@@ -153,6 +156,23 @@ public class AdminController {
         return "redirect:/admin";
     }
 
+    @PostMapping("/admin/prim")
+    public String savePrimKey(@RequestParam(defaultValue = "") String apiKey, RedirectAttributes redirectAttributes) {
+        if (apiKey.isBlank()) {
+            redirectAttributes.addFlashAttribute("notice", primKeyService.isConfigured()
+                    ? "Clé PRIM conservée." : "Saisissez une clé PRIM.");
+            return "redirect:/admin";
+        }
+        return saveAnnouncement(redirectAttributes, "Clé PRIM enregistrée.", () -> primKeyService.save(apiKey));
+    }
+
+    @PostMapping("/admin/prim/delete")
+    public String deletePrimKey(RedirectAttributes redirectAttributes) {
+        primKeyService.clear();
+        redirectAttributes.addFlashAttribute("notice", "Clé PRIM supprimée. Aucun appel PRIM ne sera émis.");
+        return "redirect:/admin";
+    }
+
     @PostMapping("/admin/external-api-mode")
     public String updateExternalApiMode(@RequestParam(defaultValue = "false") boolean testMode,
                                         RedirectAttributes redirectAttributes) {
@@ -191,6 +211,7 @@ public class AdminController {
     private void populateIndex(int page, Model model) {
         model.addAttribute("announcements", announcementService.listAll());
         model.addAttribute("proxy", proxySettingsService.current());
+        model.addAttribute("primConfigured", primKeyService.isConfigured());
         model.addAttribute("testMode", externalApiModeService.isTestMode());
         model.addAttribute("profiles", profileService.listAdminProfiles(
                 PageRequest.of(Math.max(0, page), PAGE_SIZE, Sort.by(Sort.Direction.ASC, "id"))));

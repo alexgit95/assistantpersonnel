@@ -2,16 +2,17 @@ package com.assistant.apps.transit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.assistant.Fixtures;
-import com.assistant.config.AssistantProperties;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -24,7 +25,7 @@ class PrimClientTest {
     void callsTheGlobalEndpointWithTheApiKeyHeader() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        var client = new PrimClient(builder.build(), new TransitResponseParser(), properties("prim-secret"),
+        var client = new PrimClient(builder.build(), new TransitResponseParser(), keys("prim-secret"),
                 Clock.fixed(Instant.parse("2026-10-28T12:00:00Z"), ZoneOffset.UTC));
         server.expect(requestTo(PrimClient.ENDPOINT.toString()))
                 .andExpect(method(HttpMethod.GET))
@@ -45,16 +46,15 @@ class PrimClientTest {
 
     @Test
     void rejectsMissingApiKeyWithoutSendingARequest() {
-        var client = new PrimClient(RestClient.builder().build(), new TransitResponseParser(), properties(" "),
+        var client = new PrimClient(RestClient.builder().build(), new TransitResponseParser(), keys(null),
                 Clock.systemUTC());
 
         assertThatThrownBy(client::fetchDisruptions).isInstanceOf(TransitUnavailableException.class);
     }
 
-    private static AssistantProperties properties(String apiKey) {
-        var base = Fixtures.properties();
-        return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(), base.weather(),
-                base.ui(), base.backup(), base.faceAssets(),
-                new AssistantProperties.Prim(apiKey, 750, 10, "22:00", "05:00"));
+    private static PrimKeyService keys(String apiKey) {
+        PrimKeyService keys = mock(PrimKeyService.class);
+        when(keys.currentKey()).thenReturn(Optional.ofNullable(apiKey));
+        return keys;
     }
 }

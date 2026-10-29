@@ -25,7 +25,7 @@
     <section class="backup-tools" aria-labelledby="backup-title">
         <div>
             <h2 id="backup-title" data-typewriter>Sauvegarde et restauration</h2>
-            <p class="privacy-note" data-typewriter>Le fichier contient des données personnelles et biométriques. Conservez-le en lieu sûr.</p>
+            <p class="privacy-note" data-typewriter>Le fichier contient des données personnelles et biométriques ainsi que la clé PRIM en clair. Conservez-le en lieu sûr.</p>
         </div>
         <a class="backup-download" data-typewriter th:href="@{/admin/backup}">Télécharger la sauvegarde</a>
         <form method="post" enctype="multipart/form-data" class="backup-restore-form" th:action="@{/admin/backup}">
@@ -50,6 +50,19 @@
             <label>Hôtes exclus <input type="text" name="noProxy" maxlength="500" placeholder="intranet.local, .exemple.fr" th:value="${proxy.noProxy}"></label>
             <button type="submit" data-typewriter>Enregistrer le proxy</button>
             <button type="submit" th:formaction="@{/admin/proxy/test}" data-typewriter>Tester la connexion</button>
+        </form>
+    </section>
+
+    <section class="proxy-admin" aria-labelledby="prim-title">
+        <h2 id="prim-title" data-typewriter>Clé API PRIM</h2>
+        <p class="privacy-note" data-typewriter th:text="${primConfigured} ? 'Clé PRIM configurée' : 'Clé PRIM non configurée'">Clé PRIM non configurée</p>
+        <p class="privacy-note" data-typewriter>La clé est conservée en clair, n'est jamais réaffichée et est incluse dans la sauvegarde. Sans clé, aucun appel PRIM n'est émis.</p>
+        <form method="post" class="announcement-form" th:action="@{/admin/prim}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label>Clé PRIM <input type="password" name="apiKey" maxlength="200" autocomplete="new-password"
+                                   th:placeholder="${primConfigured} ? 'Laisser vide pour conserver' : ''"></label>
+            <button type="submit" data-typewriter>Enregistrer la clé</button>
+            <button type="submit" class="danger-button" th:formaction="@{/admin/prim/delete}" th:disabled="${!primConfigured}" data-typewriter>Supprimer la clé</button>
         </form>
     </section>
 

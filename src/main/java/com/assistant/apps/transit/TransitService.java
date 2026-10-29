@@ -40,6 +40,7 @@ public class TransitService {
     private final ProfileAppService profileApps;
     private final ObjectMapper objectMapper;
     private final AssistantProperties properties;
+    private final PrimKeyService primKey;
     private final ApiQuotaService quota;
     private final QuietHours quietHours;
     private final ExternalApiModeService mode;
@@ -52,13 +53,15 @@ public class TransitService {
 
     public TransitService(@Qualifier("primClient") TransitGateway liveGateway, MockTransitGateway testGateway, LineCatalog catalog,
                           ProfileAppService profileApps, ObjectMapper objectMapper, AssistantProperties properties,
-                          ApiQuotaService quota, QuietHours quietHours, ExternalApiModeService mode, Clock clock) {
+                          PrimKeyService primKey, ApiQuotaService quota, QuietHours quietHours,
+                          ExternalApiModeService mode, Clock clock) {
         this.liveGateway = liveGateway;
         this.testGateway = testGateway;
         this.catalog = catalog;
         this.profileApps = profileApps;
         this.objectMapper = objectMapper;
         this.properties = properties;
+        this.primKey = primKey;
         this.quota = quota;
         this.quietHours = quietHours;
         this.mode = mode;
@@ -123,7 +126,7 @@ public class TransitService {
         } else if (paused) {
             feed = liveFeed;
             notice = "Alertes en pause jusqu'à " + quietHours.resumeLabel() + ".";
-        } else if (!properties.prim().configured()) {
+        } else if (!primKey.isConfigured()) {
             feed = liveFeed;
             notice = "Le service PRIM n'est pas configuré.";
         } else {
@@ -140,7 +143,7 @@ public class TransitService {
         @Scheduled(fixedRateString = "PT${assistant.prim.cache-minutes:10}M",
             initialDelayString = "PT${assistant.prim.cache-minutes:10}M")
     public void scheduledRefresh() {
-        if (mode.isTestMode() || quietHours.paused() || !properties.prim().configured()) {
+        if (mode.isTestMode() || quietHours.paused() || !primKey.isConfigured()) {
             return;
         }
         try {
@@ -174,6 +177,10 @@ public class TransitService {
             return current;
         }
         if (lastAttemptAt != null && Duration.between(lastAttemptAt, now).compareTo(refreshInterval) < 0) {
+            return current;
+        }
+        if (!primKey.isConfigured()) {
+            refreshNotice = "Le service PRIM n'est pas configuré.";
             return current;
         }
         if (!quota.tryReserve(QUOTA_KEY, properties.prim().dailyBudget())) {

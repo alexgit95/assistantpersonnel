@@ -68,6 +68,13 @@ entity "proxy_setting" as proxy_setting {
   ' Exclu de la sauvegarde admin.
 }
 
+entity "prim_setting" as prim_setting {
+  * id : bigint <<PK>>  ' ligne unique (id = 1)
+  --
+  api_key : varchar(200)  ' cle PRIM en clair (LAN), jamais reaffichee
+  ' Incluse dans la sauvegarde admin ; absente d'un ancien dump = cle videe.
+}
+
 entity "external_api_mode" as external_api_mode {
   * id : bigint <<PK>>  ' ligne unique (id = 1)
   --

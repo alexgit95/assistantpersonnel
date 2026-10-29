@@ -28,7 +28,7 @@ public final class Fixtures {
                     "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model",
                     "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.js",
                     "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/"),
-                new AssistantProperties.Prim("", 750, 10, "22:00", "05:00"));
+                new AssistantProperties.Prim(750, 10, "22:00", "05:00"));
     }
 
     /** Vecteur de 128 valeurs ; deux bases differentes de 1.0 donnent une distance d'environ 11. */

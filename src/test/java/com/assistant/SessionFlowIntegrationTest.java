@@ -90,7 +90,6 @@ class SessionFlowIntegrationTest {
                 registry.add("assistant.admin.max-failed-attempts", () -> "5");
                 registry.add("assistant.admin.lockout-minutes", () -> "1");
                 registry.add("assistant.backup.max-upload-mb", () -> "1");
-                registry.add("assistant.prim.api-key", () -> "");
     }
 
     @Autowired
@@ -478,6 +477,62 @@ class SessionFlowIntegrationTest {
         } finally {
             mvc.perform(post("/admin/proxy").session(admin).with(csrf()).param("enabled", "false"));
         }
+    }
+
+    @Test
+    void adminPrimKeyIsSavedHiddenBackedUpAndClearedByAnOldDump() throws Exception {
+        MockHttpSession admin = adminSession();
+        try {
+            mvc.perform(post("/admin/prim").session(admin).with(csrf()).param("apiKey", "prim-secret-key"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", "/admin"));
+            assertThat(jdbcTemplate.queryForObject("select api_key from prim_setting", String.class))
+                    .isEqualTo("prim-secret-key");
+
+            String page = mvc.perform(get("/admin").session(admin)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(page).contains("Clé PRIM configurée").doesNotContain("prim-secret-key");
+
+            mvc.perform(post("/admin/prim").session(admin).with(csrf()).param("apiKey", " "))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select api_key from prim_setting", String.class))
+                    .isEqualTo("prim-secret-key");
+
+            MvcResult pendingDownload = mvc.perform(get("/admin/backup").session(admin))
+                    .andExpect(request().asyncStarted()).andReturn();
+            byte[] backup = mvc.perform(asyncDispatch(pendingDownload)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            var json = objectMapper.readTree(backup);
+            assertThat(json.path("tables").path("prim_setting").get(0).path("apiKey").stringValue())
+                    .isEqualTo("prim-secret-key");
+
+            jdbcTemplate.update("update prim_setting set api_key = ?", "autre");
+            restore(admin, backup).andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select api_key from prim_setting", String.class))
+                    .isEqualTo("prim-secret-key");
+
+            ((tools.jackson.databind.node.ObjectNode) json.path("tables")).remove("prim_setting");
+            restore(admin, objectMapper.writeValueAsBytes(json)).andExpect(status().is3xxRedirection());
+            assertThat(jdbcTemplate.queryForObject("select count(*) from prim_setting", Integer.class)).isZero();
+
+            ((tools.jackson.databind.node.ObjectNode) json.path("tables")).remove("profile");
+            restore(admin, objectMapper.writeValueAsBytes(json)).andExpect(status().isBadRequest());
+
+            mvc.perform(post("/admin/prim").with(csrf()).param("apiKey", "x"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", containsString("/admin/login")));
+        } finally {
+            mvc.perform(post("/admin/prim/delete").session(admin).with(csrf()))
+                    .andExpect(status().is3xxRedirection());
+        }
+        assertThat(jdbcTemplate.queryForObject("select count(*) from prim_setting", Integer.class)).isZero();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions restore(MockHttpSession admin, byte[] content)
+            throws Exception {
+        MockMultipartFile file = new MockMultipartFile("backupFile", "assistant.json", "application/json", content);
+        return mvc.perform(multipart("/admin/backup").file(file).param("confirmed", "true")
+                .session(admin).with(csrf()));
     }
 
     @Test

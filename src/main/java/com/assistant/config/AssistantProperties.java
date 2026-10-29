@@ -25,17 +25,12 @@ public record AssistantProperties(
         @Valid @NotNull FaceAssets faceAssets,
         @Valid @NotNull Prim prim) {
 
-    /** Acces PRIM (Ile-de-France Mobilites) : cle, budget journalier d'appels, cache et pause nocturne (heure de Paris). */
+    /** Acces PRIM (Ile-de-France Mobilites) : budget journalier d'appels, cache et pause nocturne (heure de Paris). */
     public record Prim(
-            String apiKey,
             @Min(1) @Max(800) int dailyBudget,
             @Min(1) @Max(1440) int cacheMinutes,
             @NotNull @Pattern(regexp = "^$|([01]\\d|2[0-3]):[0-5]\\d$", message = "Heure attendue au format HH:mm") String pauseFrom,
             @NotNull @Pattern(regexp = "^$|([01]\\d|2[0-3]):[0-5]\\d$", message = "Heure attendue au format HH:mm") String pauseTo) {
-
-        public boolean configured() {
-            return apiKey != null && !apiKey.isBlank();
-        }
     }
 
     public record Session(

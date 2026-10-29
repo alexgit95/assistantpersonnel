@@ -2,6 +2,20 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.6]
+
+### Added
+- Clé API PRIM saisie depuis `/admin` (enregistrer, remplacer, supprimer) : stockée en clair dans la nouvelle table `prim_setting`, jamais réaffichée, prise en compte sans redémarrage. Elle est incluse dans la sauvegarde ; un ancien dump sans cette table se restaure et vide la clé.
+
+### Changed
+- **BREAKING** : la variable `ASSISTANT_PRIM_API_KEY` et la propriété `assistant.prim.api-key` sont supprimées ; la clé doit être ressaisie dans `/admin` après mise à jour.
+- Aucun appel PRIM ni consommation du quota journalier tant qu'aucune clé n'est enregistrée (requêtes à la demande et actualisation planifiée).
+- Le verrouillage du défilement est limité à l'accueil ; `/configuration`, `/admin` et `/enroll` défilent.
+- Version du projet portée à 0.0.6 (`pom.xml`).
+
+### Fixed
+- CSS corrompu de `home.css` (bloc `button` non fermé, règles `.icon-button` éclatées) qui privait le bouton de retour de `/configuration` de sa taille et de sa bordure.
+
 ## [0.0.5]
 
 ### Added

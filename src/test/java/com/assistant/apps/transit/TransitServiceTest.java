@@ -33,15 +33,17 @@ class TransitServiceTest {
     private final ApiQuotaService quota = mock(ApiQuotaService.class);
     private final QuietHours quietHours = mock(QuietHours.class);
     private final ExternalApiModeService mode = mock(ExternalApiModeService.class);
+    private final PrimKeyService primKey = mock(PrimKeyService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-10-28T12:00:00Z"), ZoneOffset.UTC);
     private final LineCatalog catalog = new LineCatalog(new DefaultResourceLoader(), new ObjectMapper(), clock);
     private final TransitService service = new TransitService(liveGateway, testGateway, catalog, profileApps,
-            new ObjectMapper(), properties(), quota, quietHours, mode, clock);
+            new ObjectMapper(), properties(), primKey, quota, quietHours, mode, clock);
 
     @BeforeEach
     void setUp() {
         when(mode.isTestMode()).thenReturn(false);
         when(quietHours.paused()).thenReturn(false);
+        when(primKey.isConfigured()).thenReturn(true);
         when(quietHours.resumeLabel()).thenReturn("5 h");
         when(quota.tryReserve("prim", 750)).thenReturn(true);
         when(profileApps.requireEnabled(1L, "transit")).thenReturn(new ProfileAppService.EnabledApp(
@@ -78,7 +80,7 @@ class TransitServiceTest {
             .thenThrow(new TransitUnavailableException(new IllegalStateException("offline")));
         when(quota.tryReserve("prim", 750)).thenReturn(true, true);
         TransitService timed = new TransitService(liveGateway, testGateway, catalog, profileApps,
-            new ObjectMapper(), properties(), quota, quietHours, mode, mutableClock);
+            new ObjectMapper(), properties(), primKey, quota, quietHours, mode, mutableClock);
 
         var first = timed.alerts(1L);
         assertThat(first.fetchedAt()).isEqualTo(initial.fetchedAt());
@@ -103,7 +105,7 @@ class TransitServiceTest {
             "PERTURBEE", "TRAVAUX", Set.of(), true, List.of());
         when(liveGateway.fetchDisruptions()).thenReturn(new TransitFeed(List.of(unrelatedStructured), clock.instant()));
         var another = new TransitService(liveGateway, testGateway, catalog, profileApps, new ObjectMapper(),
-                properties(), quota, quietHours, mode, clock);
+                properties(), primKey, quota, quietHours, mode, clock);
         when(quota.tryReserve("prim", 750)).thenReturn(true);
 
         assertThat(another.alerts(1L).lines().getFirst().alerts()).isEmpty();
@@ -134,7 +136,7 @@ class TransitServiceTest {
             new TransitAssistantApp(), 1,
             "{\"favoriteLineIds\":[\"C01742\",\"C01739\",\"C02795\"]}"));
         TransitService fixtureService = new TransitService(liveGateway, fixtureGateway, fixtureCatalog,
-            profileApps, new ObjectMapper(), properties(), quota, quietHours, mode, fixtureClock);
+            profileApps, new ObjectMapper(), properties(), primKey, quota, quietHours, mode, fixtureClock);
 
         var overview = fixtureService.alerts(1L);
 
@@ -147,6 +149,30 @@ class TransitServiceTest {
         verifyNoInteractions(liveGateway);
         verifyNoInteractions(quota);
         }
+
+    @Test
+    void withoutKeyNeitherCallsPrimNorReservesQuota() {
+        when(primKey.isConfigured()).thenReturn(false);
+
+        var overview = service.alerts(1L);
+        service.scheduledRefresh();
+
+        assertThat(overview.notice()).contains("n'est pas configuré");
+        assertThat(overview.fetchedAt()).isNull();
+        verifyNoInteractions(liveGateway);
+        verifyNoInteractions(quota);
+    }
+
+    @Test
+    void keyEnteredLaterIsUsedWithoutRestart() {
+        when(primKey.isConfigured()).thenReturn(false, true);
+        when(liveGateway.fetchDisruptions()).thenReturn(new TransitFeed(List.of(), clock.instant()));
+
+        assertThat(service.alerts(1L).fetchedAt()).isNull();
+        assertThat(service.alerts(1L).fetchedAt()).isEqualTo(clock.instant());
+
+        verify(liveGateway).fetchDisruptions();
+    }
 
     @Test
     void pausedWindowUsesCachedDataWithoutReservingQuotaOrCallingPrim() {
@@ -175,7 +201,7 @@ class TransitServiceTest {
         var base = Fixtures.properties();
         return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(), base.weather(),
                 base.ui(), base.backup(), base.faceAssets(),
-                new AssistantProperties.Prim("test-key", 750, 10, "22:00", "05:00"));
+                new AssistantProperties.Prim(750, 10, "22:00", "05:00"));
     }
 
     private static final class MutableClock extends Clock {

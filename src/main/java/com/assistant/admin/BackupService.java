@@ -52,6 +52,8 @@ public class BackupService {
     private static final Set<Class<?>> EXCLUDED_FROM_BACKUP = Set.of(AppSession.class, ProxySetting.class,
             ExternalApiQuota.class, ExternalApiMode.class);
     private static final int PAGE_SIZE = 200;
+    // Tables ajoutees apres la v1 du format : absentes d'un ancien dump, elles sont restaurees vides.
+    private static final Set<String> OPTIONAL_TABLES = Set.of("prim_setting");
 
     private final EntityManager entityManager;
     private final JdbcTemplate jdbc;
@@ -179,14 +181,17 @@ public class BackupService {
         JsonNode tables = root.path("tables");
         Set<String> providedTables = new HashSet<>();
         providedTables.addAll(tables.propertyNames());
-        if (!providedTables.equals(byTable.keySet())) {
+        Set<String> missingTables = new HashSet<>(byTable.keySet());
+        missingTables.removeAll(providedTables);
+        if (!byTable.keySet().containsAll(providedTables) || !OPTIONAL_TABLES.containsAll(missingTables)) {
             throw invalid("Les tables du fichier ne correspondent pas au schéma actuel.");
         }
 
         Map<EntityModel, List<BackupRow>> rowsByModel = new LinkedHashMap<>();
         Map<EntityModel, Set<Object>> idsByModel = new HashMap<>();
         for (EntityModel model : ordered) {
-            JsonNode tableRows = tables.path(model.tableName());
+            JsonNode tableRows = providedTables.contains(model.tableName())
+                    ? tables.path(model.tableName()) : objectMapper.createArrayNode();
             if (!tableRows.isArray()) {
                 throw invalid("La table " + model.tableName() + " doit contenir un tableau.");
             }

@@ -1,6 +1,5 @@
 package com.assistant.apps.transit;
 
-import com.assistant.config.AssistantProperties;
 import com.assistant.proxy.OutboundHttp;
 import java.time.Clock;
 import java.time.Duration;
@@ -21,27 +20,24 @@ public class PrimClient implements TransitGateway {
 
     private final RestClient restClient;
     private final TransitResponseParser parser;
-    private final AssistantProperties properties;
+    private final PrimKeyService keyService;
     private final Clock clock;
 
     @Autowired
-    public PrimClient(TransitResponseParser parser, AssistantProperties properties, Clock clock) {
-        this(defaultClient(), parser, properties, clock);
+    public PrimClient(TransitResponseParser parser, PrimKeyService keyService, Clock clock) {
+        this(defaultClient(), parser, keyService, clock);
     }
 
-    PrimClient(RestClient restClient, TransitResponseParser parser, AssistantProperties properties, Clock clock) {
+    PrimClient(RestClient restClient, TransitResponseParser parser, PrimKeyService keyService, Clock clock) {
         this.restClient = restClient;
         this.parser = parser;
-        this.properties = properties;
+        this.keyService = keyService;
         this.clock = clock;
     }
 
     @Override
     public TransitFeed fetchDisruptions() {
-        String apiKey = properties.prim().apiKey();
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new TransitUnavailableException(null);
-        }
+        String apiKey = keyService.currentKey().orElseThrow(() -> new TransitUnavailableException(null));
         try {
             JsonNode body = restClient.get().uri(ENDPOINT).header("apikey", apiKey).retrieve().body(JsonNode.class);
             return parser.parse(body, Instant.now(clock));

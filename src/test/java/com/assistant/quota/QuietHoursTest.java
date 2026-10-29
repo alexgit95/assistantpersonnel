@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class QuietHoursTest {
 
     private static QuietHours at(String instant, String from, String to) {
-        var prim = new AssistantProperties.Prim("", 750, 15, from, to);
+        var prim = new AssistantProperties.Prim(750, 15, from, to);
         var properties = new AssistantProperties(null, null, null, null, null, null, null, null, prim);
         return new QuietHours(properties, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }

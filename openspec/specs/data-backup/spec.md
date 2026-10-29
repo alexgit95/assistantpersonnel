@@ -5,7 +5,7 @@ Define administrator-controlled, portable JSON export and transactional database
 ## Requirements
 
 ### Requirement: Export JSON complet
-Depuis la page d'administration, le système SHALL permettre de télécharger un fichier JSON contenant tout le contenu de la base (profils, embeddings, avatars, configurations et données de toutes les applications), à l'exclusion des sessions.
+Depuis la page d'administration, le système SHALL permettre de télécharger un fichier JSON contenant tout le contenu de la base (profils, embeddings, avatars, configurations, clé PRIM et données de toutes les applications), à l'exclusion des sessions. Le fichier contenant la clé PRIM en clair, l'avertissement de confidentialité de la sauvegarde SHALL la mentionner.
 
 #### Scenario: Téléchargement
 - **WHEN** l'administrateur clique sur « Télécharger la sauvegarde »
@@ -15,6 +15,10 @@ Depuis la page d'administration, le système SHALL permettre de télécharger un
 - **WHEN** une nouvelle application avec ses propres entités est ajoutée
 - **THEN** ses données sont incluses dans l'export sans modification du code de sauvegarde
 
+#### Scenario: Clé PRIM exportée
+- **WHEN** une clé PRIM est enregistrée et que l'administrateur exporte une sauvegarde
+- **THEN** la table `prim_setting` figure dans le fichier avec la clé
+
 ### Requirement: Export économe en mémoire
 L'export SHALL être écrit en flux, table par table avec pagination, sans charger toute la base en mémoire.
 
@@ -23,11 +27,19 @@ L'export SHALL être écrit en flux, table par table avec pagination, sans charg
 - **THEN** la consommation mémoire reste bornée indépendamment de la taille de la base
 
 ### Requirement: Restauration depuis un fichier
-La page d'administration SHALL permettre de restaurer la base depuis un fichier d'export après confirmation explicite. La restauration remplace tout le contenu existant en une seule transaction.
+La page d'administration SHALL permettre de restaurer la base depuis un fichier d'export après confirmation explicite. La restauration remplace tout le contenu existant en une seule transaction. Un fichier produit avant l'introduction de la table `prim_setting` SHALL rester restaurable : la table est alors considérée vide et la clé PRIM existante est supprimée.
 
 #### Scenario: Restauration réussie
 - **WHEN** l'administrateur envoie un fichier valide et confirme
 - **THEN** le contenu actuel est remplacé par celui du fichier et toutes les sessions sont invalidées
+
+#### Scenario: Restauration de la clé PRIM
+- **WHEN** le fichier contient une clé PRIM
+- **THEN** elle remplace la clé actuelle et est utilisée dès l'appel PRIM suivant
+
+#### Scenario: Ancien fichier sans table prim_setting
+- **WHEN** le fichier est valide mais ne contient pas la table `prim_setting`
+- **THEN** la restauration réussit et aucune clé PRIM n'est configurée ensuite
 
 #### Scenario: Fichier invalide
 - **WHEN** le fichier n'est pas un JSON conforme, a une version inconnue ou une structure incompatible
