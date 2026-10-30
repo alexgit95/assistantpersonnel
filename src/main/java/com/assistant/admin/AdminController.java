@@ -3,6 +3,7 @@ package com.assistant.admin;
 import com.assistant.announcements.AnnouncementService;
 import com.assistant.apps.transit.PrimKeyService;
 import com.assistant.common.ApiException;
+import com.assistant.guest.GuestService;
 import com.assistant.news.NewsCategoryService;
 import com.assistant.profile.ProfileService;
 import com.assistant.proxy.ProxySettingsService;
@@ -45,11 +46,12 @@ public class AdminController {
     private final ExternalApiModeService externalApiModeService;
     private final PrimKeyService primKeyService;
     private final NewsCategoryService newsCategoryService;
+    private final GuestService guestService;
 
     public AdminController(ProfileService profileService, BackupService backupService,
                            AnnouncementService announcementService, ProxySettingsService proxySettingsService,
                            ExternalApiModeService externalApiModeService, PrimKeyService primKeyService,
-                           NewsCategoryService newsCategoryService) {
+                           NewsCategoryService newsCategoryService, GuestService guestService) {
         this.profileService = profileService;
         this.backupService = backupService;
         this.announcementService = announcementService;
@@ -57,6 +59,7 @@ public class AdminController {
         this.externalApiModeService = externalApiModeService;
         this.primKeyService = primKeyService;
         this.newsCategoryService = newsCategoryService;
+        this.guestService = guestService;
     }
 
     @GetMapping("/admin/login")
@@ -97,6 +100,7 @@ public class AdminController {
         }
         try (var input = backupFile.getInputStream()) {
             backupService.restore(input, backupFile.getSize());
+            guestService.ensureGuest();
         } catch (BackupService.BackupException exception) {
             return restoreError(exception.getMessage(), exception.status().value(), page, model, response);
         } catch (IOException exception) {

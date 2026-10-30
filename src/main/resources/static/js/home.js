@@ -184,8 +184,7 @@ async function execute(actions) {
         await api.heartbeat();
       } else if (action.type === 'logout' || action.type === 'expired') {
         await api.logout();
-        appPreferences = [];
-        await renderAppWidgets();
+        await loadProfileApps();
       }
     } catch (error) {
       handleApiFailure(action, error);
@@ -240,6 +239,8 @@ async function restoreSession() {
     if (!(error instanceof ApiError && error.status === 401)) {
       console.warn('Session non restaurée', error);
     }
+    // Sans session, le serveur répond avec les widgets de l'invité.
+    await loadProfileApps();
   }
 }
 

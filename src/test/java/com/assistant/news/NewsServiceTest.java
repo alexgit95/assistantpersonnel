@@ -132,4 +132,47 @@ class NewsServiceTest {
 
         assertThat(service.overview(4L).categories()).isEmpty();
     }
+
+    private void guestConfig(String configJson) {
+        when(profileApps.requireEnabledForGuest(9L, "news")).thenReturn(new ProfileAppService.EnabledApp(
+                new NewsAssistantApp(), 3, configJson));
+        when(categories.listAll()).thenReturn(List.of(tech, sport, culture));
+        org.mockito.Mockito.lenient().when(feeds.load(org.mockito.ArgumentMatchers.any(NewsCategory.class)))
+                .thenReturn(new NewsFeedService.FeedResult(List.of(), null));
+    }
+
+    @Test
+    void theGuestSeesEveryCategoryWhenNoSelectionWasEverSaved() {
+        guestConfig("{}");
+
+        assertThat(service.overview(9L, true).categories()).extracting(NewsService.CategoryContent::name)
+                .containsExactly("Tech", "Sport", "Culture");
+    }
+
+    @Test
+    void aSavedGuestSelectionIsAppliedAsIsAndANewCategoryIsNotAdded() {
+        guestConfig("{\"categoryIds\":[2]}");
+
+        assertThat(service.overview(9L, true).categories()).extracting(NewsService.CategoryContent::name)
+                .containsExactly("Sport");
+    }
+
+    @Test
+    void anEmptySavedGuestSelectionShowsNoCategory() {
+        guestConfig("{\"categoryIds\":[]}");
+
+        assertThat(service.overview(9L, true).categories()).isEmpty();
+    }
+
+    @Test
+    void aProfileWithoutSelectionStillSeesNothing() {
+        when(profileApps.requireEnabled(4L, "news")).thenReturn(new ProfileAppService.EnabledApp(
+                new NewsAssistantApp(), 0, "{}"));
+        when(categories.listAll()).thenReturn(List.of(tech));
+
+        assertThat(service.overview(4L, false).categories()).isEmpty();
+        assertThat(service.hasSelection("{}")).isFalse();
+        assertThat(service.hasSelection("{\"categoryIds\":[]}")).isTrue();
+        assertThat(service.hasSelection("pas du json")).isFalse();
+    }
 }

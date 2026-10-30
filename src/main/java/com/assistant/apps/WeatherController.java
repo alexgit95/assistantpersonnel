@@ -1,5 +1,6 @@
 package com.assistant.apps;
 
+import com.assistant.auth.AllowGuest;
 import com.assistant.auth.AuthenticatedSession;
 import com.assistant.auth.RequireSession;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,7 +72,8 @@ public class WeatherController {
     }
 
     @GetMapping
-    @Operation(summary = "Récupère la météo actuelle et les prévisions du profil connecté",
+    @AllowGuest
+    @Operation(summary = "Récupère la météo actuelle et les prévisions du profil connecté ou de l'écran invité",
             description = "Quatre jours (aujourd'hui + trois) : matin (6-12 h) et après-midi (12-18 h) avec code WMO, "
                     + "risque de pluie, rafales maximales (km/h), alerte vent (> 50 km/h) et phrase de conseil.")
     @ApiResponses({

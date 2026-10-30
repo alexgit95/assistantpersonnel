@@ -107,14 +107,14 @@ class ProfileServiceTest {
 
     @Test
     void createRefusedWhenProfileLimitReached() {
-        when(profiles.count()).thenReturn(3L);
+        when(profiles.countWithoutGuest()).thenReturn(3L);
         assertStatus(() -> service(3).create("Alice", Fixtures.vectors(5, 0f), null), HttpStatus.CONFLICT);
         verify(profiles, never()).save(any());
     }
 
     @Test
     void createAllowedBelowProfileLimit() {
-        when(profiles.count()).thenReturn(2L);
+        when(profiles.countWithoutGuest()).thenReturn(2L);
         service(3).create("Alice", Fixtures.vectors(5, 0f), null);
         verify(profiles).save(any());
     }
@@ -220,6 +220,17 @@ class ProfileServiceTest {
     }
 
     @Test
+    void deleteRefusesTheGuestProfile() {
+        when(profiles.findById(7L)).thenReturn(Optional.of(existingProfile(1)));
+        when(profiles.isGuest(7L)).thenReturn(true);
+
+        assertStatus(() -> service(0).delete(7L), HttpStatus.BAD_REQUEST);
+
+        verify(profiles, never()).delete(any());
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
     void deleteUnknownProfileIsNotFound() {
         when(profiles.findById(7L)).thenReturn(Optional.empty());
         assertStatus(() -> service(0).delete(7L), HttpStatus.NOT_FOUND);
@@ -242,12 +253,12 @@ class ProfileServiceTest {
     @Test
     void adminProfileListIsPagedAndContainsOnlyNameAndAvatar() {
         Profile profile = existingProfile(3);
-        when(profiles.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(profile)));
+        when(profiles.findAllWithoutGuest(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(profile)));
 
         var page = service(0).listAdminProfiles(PageRequest.of(0, 50));
 
         assertThat(page.getContent()).containsExactly(new ProfileService.AdminProfileView(7L, "Bob", null));
-        verify(profiles).findAll(any(Pageable.class));
+        verify(profiles).findAllWithoutGuest(any(Pageable.class));
     }
 
     @Test

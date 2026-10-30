@@ -30,4 +30,9 @@ public class NewsAssistantApp implements AssistantApp {
     public String widgetModule() {
         return "/js/widgets/news.js";
     }
+
+    @Override
+    public boolean guestAllowed() {
+        return true;
+    }
 }

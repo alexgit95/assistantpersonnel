@@ -22,6 +22,8 @@
 
     <p class="notice" role="status" aria-live="polite" th:if="${notice}" data-typewriter th:text="${notice}"></p>
 
+    <p><a data-typewriter th:href="@{/admin/guest}">Écran invité (widgets sans session)</a></p>
+
     <section class="backup-tools" aria-labelledby="backup-title">
         <div>
             <h2 id="backup-title" data-typewriter>Sauvegarde et restauration</h2>

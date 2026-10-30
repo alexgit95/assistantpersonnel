@@ -242,6 +242,16 @@ test('without any selected category the widget invites to configure', async () =
   assert.match(parts.status.textContent, /Choisissez des catégories/);
 });
 
+test('in guest mode the widget asks the administrator to configure instead', async () => {
+  const { root, parts, start } = setup({ testMode: false, categories: [] });
+  root.dataset.guest = 'true';
+  await start();
+
+  assert.equal(parts.status.hidden, false);
+  assert.match(parts.status.textContent, /administrateur/);
+  assert.doesNotMatch(parts.status.textContent, /Choisissez/);
+});
+
 test('timers stop once the widget leaves the DOM', async () => {
   const { root, timers, start } = setup(three);
   await start();

@@ -29,4 +29,9 @@ public class WeatherAssistantApp implements AssistantApp {
     public String widgetModule() {
         return "/js/widgets/weather.js";
     }
+
+    @Override
+    public boolean guestAllowed() {
+        return true;
+    }
 }

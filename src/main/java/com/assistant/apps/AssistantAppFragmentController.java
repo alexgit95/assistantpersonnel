@@ -1,5 +1,6 @@
 package com.assistant.apps;
 
+import com.assistant.auth.AllowGuest;
 import com.assistant.auth.AuthenticatedSession;
 import com.assistant.auth.RequireSession;
 import com.assistant.integrations.ExternalApiModeService;
@@ -24,8 +25,12 @@ public class AssistantAppFragmentController {
     }
 
     @GetMapping("/{appKey}/fragment")
+    @AllowGuest
     public String fragment(@PathVariable String appKey, AuthenticatedSession session, Model model) {
-        ProfileAppService.EnabledApp app = profileAppService.requireEnabled(session.profileId(), appKey);
+        ProfileAppService.EnabledApp app = session.isGuest()
+                ? profileAppService.requireEnabledForGuest(session.profileId(), appKey)
+                : profileAppService.requireEnabled(session.profileId(), appKey);
+        model.addAttribute("guest", session.isGuest());
         model.addAttribute("appKey", app.definition().key());
         model.addAttribute("appTitle", app.definition().title());
         model.addAttribute("appConfigJson", app.configJson());

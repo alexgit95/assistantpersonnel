@@ -164,7 +164,9 @@ export async function initialize(container, _configJson, typingOptions = {}, dep
       header.hidden = true;
       list.replaceChildren();
       status.hidden = false;
-      status.textContent = 'Choisissez des catégories dans la configuration du widget.';
+      status.textContent = root.dataset.guest === 'true'
+        ? 'À configurer par l\'administrateur.'
+        : 'Choisissez des catégories dans la configuration du widget.';
       return;
     }
     header.hidden = false;

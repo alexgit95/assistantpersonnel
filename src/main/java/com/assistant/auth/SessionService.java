@@ -41,6 +41,9 @@ public class SessionService {
     public IssuedSession login(long profileId, String previousToken) {
         String name = profiles.findNameById(profileId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Profil introuvable."));
+        if (profiles.isGuest(profileId)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Profil introuvable.");
+        }
         if (previousToken != null && !previousToken.isBlank()) {
             sessions.deleteById(hash(previousToken));
         }

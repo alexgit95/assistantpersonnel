@@ -107,7 +107,7 @@ class NewsControllerTest {
     @Test
     void returnsTheFeedOfTheSelectedCategories() throws Exception {
         authenticate();
-        when(service.overview(4L)).thenReturn(new NewsService.Overview(false, List.of(
+        when(service.overview(4L, false)).thenReturn(new NewsService.Overview(false, List.of(
                 new NewsService.CategoryContent(1L, "Tech", List.of(new NewsEntry("Titre", "Desc")), null))));
 
         mvc.perform(get("/api/news/feed").cookie(cookie))
@@ -121,7 +121,7 @@ class NewsControllerTest {
     @Test
     void aDisabledWidgetIsNotFound() throws Exception {
         authenticate();
-        when(service.overview(4L)).thenThrow(new ApiException(HttpStatus.NOT_FOUND, "Application désactivée."));
+        when(service.overview(4L, false)).thenThrow(new ApiException(HttpStatus.NOT_FOUND, "Application désactivée."));
 
         mvc.perform(get("/api/news/feed").cookie(cookie)).andExpect(status().isNotFound());
     }

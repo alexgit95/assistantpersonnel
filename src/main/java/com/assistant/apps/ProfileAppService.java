@@ -69,6 +69,22 @@ public class ProfileAppService {
     }
 
     @Transactional(readOnly = true)
+    public List<AppPreference> listForGuest(long guestProfileId) {
+        return listForProfile(guestProfileId).stream()
+                .filter(AppPreference::enabled)
+                .filter(app -> registry.require(app.key()).guestAllowed())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public EnabledApp requireEnabledForGuest(long guestProfileId, String appKey) {
+        if (!registry.require(appKey).guestAllowed()) {
+            throw appDisabled();
+        }
+        return requireEnabled(guestProfileId, appKey);
+    }
+
+    @Transactional(readOnly = true)
     public EnabledApp requireEnabled(long profileId, String appKey) {
         AssistantApp definition = registry.require(appKey);
         AppPreference preference = listForProfile(profileId).stream()

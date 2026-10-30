@@ -37,6 +37,10 @@ Le système SHALL afficher une grille fixe sans défilement : horloge en haut à
 - **WHEN** une session est active
 - **THEN** seuls les widgets affectés aux emplacements du profil courant sont affichés, sans modifier la géométrie de la grille
 
+#### Scenario: Sans session
+- **WHEN** aucune session n'est active
+- **THEN** seuls les widgets de l'invité sont affichés dans ses emplacements, sans modifier la géométrie de la grille
+
 #### Scenario: Aucun défilement
 - **WHEN** l'accueil est affiché sur un appareil pris en charge
 - **THEN** la grille et ses widgets tiennent dans la fenêtre sans défilement horizontal ou vertical
@@ -88,3 +92,10 @@ Chaque contrôleur REST SHALL être documenté avec les annotations OpenAPI (`@T
 #### Scenario: Swagger
 - **WHEN** on ouvre l'interface Swagger
 - **THEN** tous les endpoints exposent paramètres, codes de retour et DTO
+
+### Requirement: Applications autorisées pour l'invité
+Le contrat d'application SHALL exposer `guestAllowed()`, faux par défaut, qui indique si l'application peut être servie sans session au profil invité.
+
+#### Scenario: Valeur par défaut
+- **WHEN** une application n'implémente pas `guestAllowed()`
+- **THEN** elle est considérée comme interdite à l'invité

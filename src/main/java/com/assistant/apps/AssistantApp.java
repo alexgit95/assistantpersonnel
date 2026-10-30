@@ -25,6 +25,11 @@ public interface AssistantApp {
         return false;
     }
 
+    /** Vrai si l'application peut etre servie sans session au profil invite (liste blanche serveur). */
+    default boolean guestAllowed() {
+        return false;
+    }
+
     default int defaultPosition() {
         return ProfileAppService.UNASSIGNED_SLOT;
     }

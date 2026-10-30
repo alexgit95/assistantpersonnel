@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Écran invité | Assistant</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<main class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <a class="back-link" th:href="@{/admin}">Retour à l'administration</a>
+            <h1>Écran invité</h1>
+        </div>
+    </header>
+
+    <p class="notice" role="status" aria-live="polite" th:if="${notice}" th:text="${notice}"></p>
+    <p class="privacy-note">Ces widgets s'affichent quand personne n'est connecté. Seules les applications non personnelles sont proposées.</p>
+
+    <section class="announcements-admin" aria-labelledby="layout-title">
+        <h2 id="layout-title">Emplacements</h2>
+        <form method="post" class="announcement-form" th:action="@{/admin/guest/layout}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label th:each="slot : ${slots}">
+                <span th:text="${slot.label}"></span>
+                <select th:name="|slot${slot.index}|">
+                    <option value="" th:selected="${slot.selectedKey.isEmpty()}">Vide</option>
+                    <option th:each="app : ${apps}" th:value="${app.key}" th:text="${app.title}"
+                            th:selected="${app.key == slot.selectedKey}"></option>
+                </select>
+            </label>
+            <button type="submit">Enregistrer les emplacements</button>
+        </form>
+    </section>
+
+    <section class="announcements-admin" aria-labelledby="city-title">
+        <h2 id="city-title">Ville de la météo</h2>
+        <p class="privacy-note" th:text="${cityName.isEmpty()} ? 'Aucune ville configurée.' : |Ville actuelle : ${cityName}|"></p>
+        <form method="get" class="announcement-form" th:action="@{/admin/guest}">
+            <label>Rechercher une ville
+                <input type="search" name="cityQuery" minlength="2" maxlength="100" required th:value="${cityQuery}">
+            </label>
+            <button type="submit">Rechercher</button>
+        </form>
+        <ul class="announcement-list">
+            <li th:each="city : ${cityResults}" class="announcement-item">
+                <span th:text="${city.label()}"></span>
+                <form method="post" class="announcement-form" th:action="@{/admin/guest/city}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="id" th:value="${city.id}">
+                    <input type="hidden" name="name" th:value="${city.name}">
+                    <input type="hidden" name="region" th:value="${city.region}">
+                    <input type="hidden" name="country" th:value="${city.country}">
+                    <input type="hidden" name="latitude" th:value="${city.latitude}">
+                    <input type="hidden" name="longitude" th:value="${city.longitude}">
+                    <button type="submit">Choisir</button>
+                </form>
+            </li>
+        </ul>
+    </section>
+
+    <section class="announcements-admin" aria-labelledby="news-title">
+        <h2 id="news-title">Catégories d'actualités</h2>
+        <p class="privacy-note">Tant qu'aucun choix n'est enregistré, toutes les catégories sont affichées.</p>
+        <form method="post" class="announcement-form" th:action="@{/admin/guest/news}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label class="announcement-check" th:each="category : ${categories}">
+                <input type="checkbox" name="categoryIds" th:value="${category.id}" th:checked="${category.checked}">
+                <span th:text="${category.name}"></span>
+            </label>
+            <p class="privacy-note" th:if="${categories.isEmpty()}">Aucune catégorie : créez-en depuis l'administration.</p>
+            <button type="submit">Enregistrer les catégories</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

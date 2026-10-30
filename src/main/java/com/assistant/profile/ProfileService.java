@@ -54,7 +54,7 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public Page<AdminProfileView> listAdminProfiles(Pageable pageable) {
-        return profiles.findAll(pageable)
+        return profiles.findAllWithoutGuest(pageable)
                 .map(profile -> new AdminProfileView(profile.getId(), profile.getName(), profile.getAvatar()));
     }
 
@@ -67,7 +67,7 @@ public class ProfileService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Entre " + enrollment.minPhotos() + " et "
                     + enrollment.maxPhotos() + " captures sont necessaires.");
         }
-        if (enrollment.maxProfiles() > 0 && profiles.count() >= enrollment.maxProfiles()) {
+        if (enrollment.maxProfiles() > 0 && profiles.countWithoutGuest() >= enrollment.maxProfiles()) {
             throw new ApiException(HttpStatus.CONFLICT, "Le nombre maximal de profils est atteint.");
         }
         rejectKnownFace(embeddings, NO_PROFILE);
@@ -117,6 +117,9 @@ public class ProfileService {
     @Transactional
     public void delete(long profileId) {
         Profile profile = findOrThrow(profileId);
+        if (profiles.isGuest(profileId)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Le profil invité ne peut pas être purgé.");
+        }
         profiles.delete(profile);
         events.publishEvent(new ProfileDeletedEvent(profileId));
     }

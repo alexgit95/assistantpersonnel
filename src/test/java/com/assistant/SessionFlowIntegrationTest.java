@@ -676,7 +676,12 @@ class SessionFlowIntegrationTest {
         Cookie bobCookie = login(bob);
 
         mvc.perform(get("/api/apps"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.key=='weather')].position").value(1))
+                .andExpect(jsonPath("$[?(@.key=='news')].position").value(3))
+                .andExpect(jsonPath("$[?(@.key=='weight')]").isEmpty());
         mvc.perform(get("/api/apps").cookie(aliceCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.key=='sample-widget')].enabled").value(false))
@@ -696,7 +701,7 @@ class SessionFlowIntegrationTest {
         mvc.perform(get("/apps/sample-widget/fragment").cookie(bobCookie))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/apps/sample-widget/fragment"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isNotFound());
         mvc.perform(get("/apps/sample-widget/fragment").cookie(aliceCookie))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Widget d’intégration")))
@@ -944,5 +949,122 @@ class SessionFlowIntegrationTest {
                 .andExpect(content().string(containsString("Lyon")))
                 .andExpect(content().string(containsString("data-weather-current")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("/configuration"))));
+    }
+
+    @Test
+    void restoringADumpWithoutTheGuestRecreatesItWithItsDefaults() throws Exception {
+        long guestId = jdbcTemplate.queryForObject("select profile_id from guest_setting", Long.class);
+        MockHttpSession admin = adminSession();
+        MvcResult pending = mvc.perform(get("/admin/backup").session(admin))
+                .andExpect(request().asyncStarted()).andReturn();
+        byte[] backup = mvc.perform(asyncDispatch(pending)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        var root = (tools.jackson.databind.node.ObjectNode) objectMapper.readTree(backup);
+        var tables = (tools.jackson.databind.node.ObjectNode) root.get("tables");
+        assertThat(tables.has("guest_setting")).isTrue();
+        tables.remove("guest_setting");
+        for (String table : List.of("profile", "profile_app")) {
+            var kept = objectMapper.createArrayNode();
+            for (var row : tables.get(table)) {
+                long owner = row.path(table.equals("profile") ? "id" : "profile").asLong();
+                if (owner != guestId) {
+                    kept.add(row);
+                }
+            }
+            tables.set(table, kept);
+        }
+
+        MockMultipartFile file = new MockMultipartFile("backupFile", "old.json", "application/json",
+                objectMapper.writeValueAsBytes(root));
+        mvc.perform(multipart("/admin/backup").file(file).param("confirmed", "true").session(admin).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(jdbcTemplate.queryForObject("select count(*) from guest_setting", Long.class)).isEqualTo(1L);
+        long recreated = jdbcTemplate.queryForObject("select profile_id from guest_setting", Long.class);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from profile where id = ?", Long.class, recreated))
+                .isEqualTo(1L);
+        mvc.perform(get("/api/apps")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.key=='weather')].position").value(1))
+                .andExpect(jsonPath("$[?(@.key=='news')].position").value(3));
+    }
+
+    @Test
+    void guestScreenServesOnlyWhitelistedReadsWithoutSession() throws Exception {
+        long guestId = jdbcTemplate.queryForObject("select profile_id from guest_setting", Long.class);
+
+        mvc.perform(get("/api/weather")).andExpect(status().isBadRequest())
+                .andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(get("/api/news/feed")).andExpect(status().isOk());
+        mvc.perform(get("/apps/weather/fragment")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-guest=\"true\"")));
+        mvc.perform(get("/apps/weight/fragment")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/weight")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/weather/cities").param("query", "Lyon")).andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/weather/location").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":1,\"name\":\"Lyon\",\"region\":\"\",\"country\":\"France\","
+                                + "\"latitude\":45.75,\"longitude\":4.85}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/news/selection").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"categoryIds\":[]}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/session")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"profileId\":" + guestId + "}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/faces")).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Invité"))));
+        mvc.perform(get("/api/apps").cookie(new Cookie(SessionCookies.NAME, "expired-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void guestAdminFormIsAdminOnlyAndRejectsNonWhitelistedApps() throws Exception {
+        long guestId = jdbcTemplate.queryForObject("select profile_id from guest_setting", Long.class);
+        mvc.perform(get("/admin/guest")).andExpect(status().is3xxRedirection());
+        MockHttpSession admin = adminSession();
+        mvc.perform(get("/admin/guest").session(admin)).andExpect(status().isOk())
+                .andExpect(content().string(containsString("Écran invité")));
+        mvc.perform(get("/admin").session(admin))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Invité<"))));
+        mvc.perform(post("/admin/guest/layout")).andExpect(status().isForbidden());
+        mvc.perform(post("/admin/profiles/" + guestId + "/purge").session(admin).with(csrf()))
+                .andExpect(status().isBadRequest());
+        assertThat(jdbcTemplate.queryForObject("select count(*) from guest_setting", Long.class)).isEqualTo(1L);
+
+        mvc.perform(post("/admin/guest/layout").session(admin).with(csrf())
+                        .param("slot0", "weight").param("slot1", "weather"))
+                .andExpect(status().is3xxRedirection());
+        mvc.perform(get("/api/apps")).andExpect(jsonPath("$[?(@.key=='news')].position").value(3));
+        try {
+            mvc.perform(post("/admin/guest/layout").session(admin).with(csrf())
+                            .param("slot1", "weather").param("slot4", "news"))
+                    .andExpect(status().is3xxRedirection());
+            mvc.perform(get("/api/apps")).andExpect(jsonPath("$[?(@.key=='news')].position").value(4));
+        } finally {
+            mvc.perform(post("/admin/guest/layout").session(admin).with(csrf())
+                    .param("slot1", "weather").param("slot3", "news"));
+        }
+        mvc.perform(get("/api/apps")).andExpect(jsonPath("$[?(@.key=='news')].position").value(3));
+    }
+
+    @Test
+    void guestCityAndNewsSelectionAreSavedByTheAdminWithoutTouchingProfiles() throws Exception {
+        long guestId = jdbcTemplate.queryForObject("select profile_id from guest_setting", Long.class);
+        MockHttpSession admin = adminSession();
+        try {
+            mvc.perform(post("/admin/guest/city").session(admin).with(csrf())
+                            .param("id", "1").param("name", "Lyon").param("region", "Auvergne-Rhône-Alpes")
+                            .param("country", "France").param("latitude", "45.75").param("longitude", "4.85"))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(mvc.perform(get("/api/apps")).andReturn().getResponse().getContentAsString())
+                    .contains("Lyon");
+            mvc.perform(post("/admin/guest/news").session(admin).with(csrf()))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(mvc.perform(get("/api/apps")).andReturn().getResponse().getContentAsString())
+                    .contains("categoryIds");
+        } finally {
+            jdbcTemplate.update("update profile_app set config_json = '{}' where profile_id = ?", guestId);
+        }
     }
 }

@@ -101,8 +101,16 @@ entity "external_api_quota" as external_api_quota {
   ' Exclu de la sauvegarde admin ; jours de plus de 7 jours purges.
 }
 
+entity "guest_setting" as guest_setting {
+  * id : bigint <<PK>>  ' ligne unique (id = 1)
+  --
+  * profile_id : bigint  ' profil invite global, sans cle etrangere ; recree s'il manque
+  ' Incluse dans la sauvegarde ; absente d'un ancien dump = invite recree apres restauration.
+}
+
 profile ||--o{ face_embedding : "supprime en cascade"
 profile ||--o{ profile_app : "supprime en cascade"
 profile ||--o{ weight_entry : "historique du poids"
 profile ||..o{ app_session : "invalide par evenement"
+profile ||..o| guest_setting : "profil invite (exclu de la reconnaissance et de la purge)"
 @enduml

@@ -2,6 +2,21 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.12]
+
+### Added
+- Écran invité : sans session faciale valide (chargement, déconnexion, expiration, pause de reconnaissance), l'accueil affiche les widgets d'un profil invité global ; dès qu'un visage est reconnu ils sont remplacés par ceux du profil. Par défaut Météo en haut à gauche (emplacement 1) et Actualités en haut à droite (emplacement 3), mêmes 5 emplacements que les profils.
+- Profil invité (« Invité ») représé par la table `guest_setting`, créé au démarrage et recréé après chaque restauration de sauvegarde (`GuestService`, `GuestInitializer`). Il est exclu de la reconnaissance faciale, de la liste d'administration, de la purge et de `ASSISTANT_MAX_PROFILES`, et aucune session ne peut être ouverte à son nom.
+- Liste blanche serveur `AssistantApp.guestAllowed()` (faux par défaut ; vrai pour Météo et Actualités) et annotation `@AllowGuest` sur les seules lectures `GET /api/apps`, `GET /apps/{key}/fragment`, `GET /api/weather` et `GET /api/news/feed`. Le poids, même activé par défaut, n'est jamais servi sans session ; les réponses invité portent `Cache-Control: no-store`.
+- Formulaire `/admin/guest` (rôle ADMIN, CSRF) : application de chacun des 5 emplacements parmi les applications autorisées, ville de la météo (recherche puis choix) et catégories d'actualités. Lien depuis `/admin`.
+- Actualités de l'invité : toutes les catégories tant que l'administrateur n'a rien enregistré (clé `categoryIds` absente), puis la sélection enregistrée telle quelle. Les widgets Météo et Actualités affichent « À configurer par l'administrateur. » en mode invité sans ville ou sans catégorie.
+- Tests JUnit 5 / Mockito (service, intercepteur, liste blanche, connexion refusée, actualités), tests d'intégration (lectures invité, formulaire admin, purge refusée) et test Node du message invité.
+
+### Changed
+- `home.js` recharge les applications sans session (au chargement, après déconnexion ou expiration) pour afficher l'écran invité. Une demande de fragment sans session pour une application non autorisée répond désormais 404 au lieu de 401.
+- `ProfileRepository.findAllWithEmbeddings` exclut l'invité ; `ProfileService` utilise `findAllWithoutGuest` et `countWithoutGuest`.
+- Version du projet portée à 0.0.12 (`pom.xml`).
+
 ## [0.0.11]
 
 ### Added

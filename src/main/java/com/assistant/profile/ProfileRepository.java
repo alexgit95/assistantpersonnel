@@ -1,6 +1,7 @@
 package com.assistant.profile;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -11,8 +12,18 @@ import org.springframework.data.repository.query.Param;
 public interface ProfileRepository extends JpaRepository<Profile, Long> {
 
     @EntityGraph(attributePaths = "embeddings")
-    @Query("select p from Profile p order by p.id")
+    @Query("select p from Profile p where p.id not in (select g.profileId from GuestSetting g) order by p.id")
     List<Profile> findAllWithEmbeddings();
+
+    @Query(value = "select p from Profile p where p.id not in (select g.profileId from GuestSetting g)",
+            countQuery = "select count(p) from Profile p where p.id not in (select g.profileId from GuestSetting g)")
+    Page<Profile> findAllWithoutGuest(Pageable pageable);
+
+    @Query("select count(p) from Profile p where p.id not in (select g.profileId from GuestSetting g)")
+    long countWithoutGuest();
+
+    @Query("select count(g) > 0 from GuestSetting g where g.profileId = :id")
+    boolean isGuest(@Param("id") Long id);
 
     @EntityGraph(attributePaths = "embeddings")
     @Query("select p from Profile p where p.id = :id")

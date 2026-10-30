@@ -260,6 +260,7 @@ export async function initialize(container, configJson, typingOptions = {}, { sl
   };
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitChart).observe(chartStage);
   const configRequired = root.querySelector('[data-weather-config-required]');
+  const guestMode = root.dataset.guest === 'true';
   const testBadge = root.querySelector('[data-external-test-mode]');
   if (testBadge) testBadge.hidden = root.dataset.testMode !== 'true';
   let config;
@@ -279,7 +280,9 @@ export async function initialize(container, configJson, typingOptions = {}, { sl
     if (!config.location) {
       current.hidden = true;
       configRequired.hidden = false;
-      typeText(status, 'Aucune ville configurée.', typingOptions);
+      const missing = guestMode ? 'À configurer par l\'administrateur.' : 'Aucune ville configurée.';
+      configRequired.textContent = missing;
+      typeText(status, missing, typingOptions);
       return;
     }
     try {

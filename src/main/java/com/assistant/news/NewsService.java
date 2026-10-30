@@ -77,17 +77,34 @@ public class NewsService {
     }
 
     public Overview overview(long profileId) {
-        ProfileAppService.EnabledApp app = profileApps.requireEnabled(profileId, APP_KEY);
+        return overview(profileId, false);
+    }
+
+    /** Pour l'invite, une selection jamais enregistree (cle absente) signifie toutes les categories. */
+    public Overview overview(long profileId, boolean guest) {
+        ProfileAppService.EnabledApp app = guest
+                ? profileApps.requireEnabledForGuest(profileId, APP_KEY)
+                : profileApps.requireEnabled(profileId, APP_KEY);
+        boolean everything = guest && !hasSelection(app.configJson());
         Set<Long> selected = new LinkedHashSet<>(readIds(app.configJson()));
         List<CategoryContent> contents = new ArrayList<>();
         for (NewsCategory category : categories.listAll()) {
-            if (selected.contains(category.getId())) {
+            if (everything || selected.contains(category.getId())) {
                 NewsFeedService.FeedResult result = feeds.load(category);
                 contents.add(new CategoryContent(category.getId(), category.getName(), result.entries(),
                         result.notice()));
             }
         }
         return new Overview(mode.isTestMode(), contents);
+    }
+
+    /** Vrai si l'administrateur ou le profil a deja enregistre un choix, meme vide. */
+    public boolean hasSelection(String configJson) {
+        try {
+            return objectMapper.readTree(configJson).path(CONFIG_KEY).isArray();
+        } catch (JacksonException exception) {
+            return false;
+        }
     }
 
     private List<Long> readIds(String configJson) {

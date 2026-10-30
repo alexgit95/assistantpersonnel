@@ -1,5 +1,6 @@
 package com.assistant.apps;
 
+import com.assistant.auth.AllowGuest;
 import com.assistant.auth.AuthenticatedSession;
 import com.assistant.auth.RequireSession;
 import com.assistant.common.ApiException;
@@ -36,7 +37,8 @@ public class ProfileAppsController {
     }
 
     @GetMapping
-    @Operation(summary = "Catalogue des applications et choix du profil connecté")
+    @AllowGuest
+    @Operation(summary = "Catalogue des applications et choix du profil connecté, ou de l'écran invité sans session")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Catalogue et préférences du profil"),
             @ApiResponse(responseCode = "401", description = "Session absente ou expirée",
@@ -44,7 +46,9 @@ public class ProfileAppsController {
             @ApiResponse(responseCode = "500", description = "Erreur interne",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))})
     public List<ProfileAppService.AppPreference> list(AuthenticatedSession session) {
-        return profileAppService.listForProfile(session.profileId());
+        return session.isGuest()
+                ? profileAppService.listForGuest(session.profileId())
+                : profileAppService.listForProfile(session.profileId());
     }
 
     @PutMapping

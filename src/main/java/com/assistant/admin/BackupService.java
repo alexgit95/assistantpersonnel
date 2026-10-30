@@ -53,7 +53,7 @@ public class BackupService {
             ExternalApiQuota.class, ExternalApiMode.class);
     private static final int PAGE_SIZE = 200;
     // Tables ajoutees apres la v1 du format : absentes d'un ancien dump, elles sont restaurees vides.
-    private static final Set<String> OPTIONAL_TABLES = Set.of("prim_setting", "news_category");
+    private static final Set<String> OPTIONAL_TABLES = Set.of("prim_setting", "news_category", "guest_setting");
 
     private final EntityManager entityManager;
     private final JdbcTemplate jdbc;

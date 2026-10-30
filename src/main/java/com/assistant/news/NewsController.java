@@ -1,5 +1,6 @@
 package com.assistant.news;
 
+import com.assistant.auth.AllowGuest;
 import com.assistant.auth.AuthenticatedSession;
 import com.assistant.auth.RequireSession;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +78,7 @@ public class NewsController {
     }
 
     @GetMapping("/feed")
+    @AllowGuest
     @Operation(summary = "Récupère les actualités des catégories cochées (10 entrées maximum par catégorie)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Catégories et entrées en texte brut, avec notice éventuelle"),
@@ -87,7 +89,7 @@ public class NewsController {
             @ApiResponse(responseCode = "500", description = "Erreur interne",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))})
     public NewsService.Overview feed(AuthenticatedSession session) {
-        return service.overview(session.profileId());
+        return service.overview(session.profileId(), session.isGuest());
     }
 
     public record SelectionRequest(@NotNull @Size(max = NewsService.MAX_SELECTION) List<@NotNull Long> categoryIds) {
