@@ -7,13 +7,13 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
     <groupId>com.assistant</groupId>
     <artifactId>assistant</artifactId>
-    <version>0.0.12</version>
+    <version>0.0.13</version>
     <name>assistant</name>
     <description>Assistant personnel avec reconnaissance faciale cote navigateur</description>
 

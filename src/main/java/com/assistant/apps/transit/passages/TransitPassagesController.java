@@ -82,7 +82,7 @@ public class TransitPassagesController {
     }
 
     @GetMapping("/next")
-    @Operation(summary = "Récupère les quatre prochains passages de chaque arrêt du profil")
+    @Operation(summary = "Récupère les 4 à 6 prochains passages de chaque arrêt du profil (6 avec 1 ou 2 arrêts, 4 avec 3)")
     @ApiResponses({
             @ApiResponse(responseCode = "200",
                     description = "Passages en minutes restantes, message de pause, de budget ou de clé absente"),

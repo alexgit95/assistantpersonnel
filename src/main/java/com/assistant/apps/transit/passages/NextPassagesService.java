@@ -34,7 +34,9 @@ public class NextPassagesService {
     static final String APP_KEY = "transit-passages";
     static final String QUOTA_KEY = "prim";
     static final int MAX_STOPS = 3;
-    static final int MAX_PASSAGES = 4;
+    static final int PASSAGES_FEW_STOPS = 6;
+    static final int PASSAGES_MANY_STOPS = 4;
+    static final int FEW_STOPS_MAX = 2;
     // Un poll à 60 s pile arrive juste avant l'échéance du cache : sans marge il serait servi périmé d'une minute.
     static final Duration CACHE_TTL = Duration.ofSeconds(55);
     private static final int MAX_CACHE = 100;
@@ -136,9 +138,10 @@ public class NextPassagesService {
         ProfileAppService.EnabledApp app = profileApps.requireEnabled(profileId, APP_KEY);
         List<TransitStop> stops = readStops(app.configJson());
         Instant now = clock.instant();
+        int perStop = passagesPerStop(stops.size());
         if (mode.isTestMode()) {
             return new Overview(true, "MODE TEST · données simulées",
-                    stops.stream().map(stop -> view(stop, testEntry(stop, now), now)).toList());
+                    stops.stream().map(stop -> view(stop, testEntry(stop, now, perStop), now, perStop)).toList());
         }
         String notice = null;
         boolean canCall = true;
@@ -156,16 +159,20 @@ public class NextPassagesService {
             if (canCall && (entry == null || stale(entry, now))) {
                 entry = refresh(stop, refreshNotice);
             }
-            views.add(view(stop, entry, now));
+            views.add(view(stop, entry, now, perStop));
         }
         return new Overview(false, notice != null ? notice : refreshNotice.get(), views);
     }
 
-    private CacheEntry testEntry(TransitStop stop, Instant now) {
+    static int passagesPerStop(int stopCount) {
+        return stopCount <= FEW_STOPS_MAX ? PASSAGES_FEW_STOPS : PASSAGES_MANY_STOPS;
+    }
+
+    private CacheEntry testEntry(TransitStop stop, Instant now, int perStop) {
         String key = "test:" + stop.arrid();
         CacheEntry entry = cache.get(key);
         // Les horaires simulés sont conservés tant qu'il reste de quoi remplir l'affichage.
-        if (entry == null || entry.feed() == null || futurePassages(entry.feed(), now).size() < MAX_PASSAGES) {
+        if (entry == null || entry.feed() == null || futurePassages(entry.feed(), now).size() < perStop) {
             entry = new CacheEntry(now, testGateway.fetch(stop.arrid()), false);
             cache.put(key, entry);
         }
@@ -201,14 +208,14 @@ public class NextPassagesService {
         return Duration.between(entry.attemptedAt(), now).compareTo(CACHE_TTL) >= 0;
     }
 
-    private StopPassages view(TransitStop stop, CacheEntry entry, Instant now) {
+    private StopPassages view(TransitStop stop, CacheEntry entry, Instant now, int perStop) {
         if (entry != null && entry.unknownStop()) {
             return new StopPassages(stop, STATE_UNKNOWN_STOP, "Arrêt indisponible", null, List.of());
         }
         if (entry == null || entry.feed() == null) {
             return new StopPassages(stop, STATE_NO_DATA, "Données indisponibles", null, List.of());
         }
-        List<PassageView> passages = futurePassages(entry.feed(), now).stream().limit(MAX_PASSAGES)
+        List<PassageView> passages = futurePassages(entry.feed(), now).stream().limit(perStop)
                 .map(passage -> toView(passage, now)).toList();
         if (passages.isEmpty()) {
             return new StopPassages(stop, STATE_NO_PASSAGE, "Aucun passage prévu", entry.feed().updatedAt(), passages);

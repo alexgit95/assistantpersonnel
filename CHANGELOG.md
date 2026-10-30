@@ -2,6 +2,17 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.13]
+
+### Changed
+- Widget « Prochains passages » : le nombre de passages affichés par arrêt dépend du nombre d'arrêts enregistrés par le profil (6 avec 1 ou 2 arrêts, 4 avec 3 arrêts, soit 12 lignes au maximum). La limite est appliquée côté serveur à l'affichage (`NextPassagesService`) ; l'appel PRIM, le cache et le budget sont inchangés. Un arrêt indisponible compte dans le nombre d'arrêts.
+- Mode TEST : `MockPassageGateway` simule 7 visites pour pouvoir remplir 6 lignes sans régénérer le cache à chaque appel.
+- Libellé Swagger de `GET /api/transit-passages/next` mis à jour.
+- Version du projet portée à 0.0.13 (`pom.xml`).
+
+### Added
+- Tests JUnit 5 / Mockito : 1 arrêt, 2 arrêts, 3 arrêts et arrêt indisponible compté.
+
 ## [0.0.12]
 
 ### Added

@@ -18,7 +18,7 @@ import tools.jackson.databind.node.ObjectNode;
 @Component
 public class MockPassageGateway implements PassageGateway {
 
-    static final int VISITS = 5;
+    static final int VISITS = 7;
 
     private final Resource fixture;
     private final PassageResponseParser parser;

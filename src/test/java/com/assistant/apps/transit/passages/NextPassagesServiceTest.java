@@ -25,6 +25,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -61,12 +63,13 @@ class NextPassagesServiceTest {
     }
 
     @Test
-    void returnsTheFourNextFuturePassagesInMinutesWithTheUpdateTime() {
+    void returnsTheSixNextFuturePassagesInMinutesWithTheUpdateTimeForASingleStop() {
         Instant now = clock.instant();
         when(liveGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
                 passage("C01154", now.minusSeconds(30)), passage("C01154", now.plusSeconds(5 * 60 + 20)),
                 passage("C01154", now.plusSeconds(9 * 60)), passage("C01154", now.plusSeconds(15 * 60)),
-                passage("C01154", now.plusSeconds(21 * 60)), passage("C01154", now.plusSeconds(33 * 60))),
+                passage("C01154", now.plusSeconds(21 * 60)), passage("C01154", now.plusSeconds(33 * 60)),
+                passage("C01154", now.plusSeconds(40 * 60)), passage("C01154", now.plusSeconds(50 * 60))),
                 now.minusSeconds(40)));
 
         var overview = service.next(1L);
@@ -76,7 +79,37 @@ class NextPassagesServiceTest {
         assertThat(stop.state()).isEqualTo(NextPassagesService.STATE_OK);
         assertThat(stop.updatedAt()).isEqualTo(now.minusSeconds(40));
         assertThat(stop.passages()).extracting(NextPassagesService.PassageView::minutes)
-                .containsExactly(5, 9, 15, 21);
+                .containsExactly(5, 9, 15, 21, 33, 40);
+    }
+
+    @Test
+    void returnsSixPassagesPerStopWithTwoStopsAndFourWithThree() {
+        Instant now = clock.instant();
+        var feed = new PassageFeed(IntStream.rangeClosed(1, 8)
+                .mapToObj(index -> passage("C01154", now.plusSeconds(index * 60L))).toList(), now);
+        when(liveGateway.fetch(anyString())).thenReturn(feed);
+
+        useConfig(stopsConfig(2));
+        assertThat(service.next(1L).stops()).allSatisfy(stop -> assertThat(stop.passages()).hasSize(6));
+
+        useConfig(stopsConfig(3));
+        assertThat(service.next(1L).stops()).allSatisfy(stop -> assertThat(stop.passages()).hasSize(4));
+    }
+
+    @Test
+    void countsAnUnavailableStopWhenChoosingThePassageLimit() {
+        Instant now = clock.instant();
+        var feed = new PassageFeed(IntStream.rangeClosed(1, 8)
+                .mapToObj(index -> passage("C01154", now.plusSeconds(index * 60L))).toList(), now);
+        when(liveGateway.fetch(anyString())).thenReturn(feed);
+        when(liveGateway.fetch("2")).thenThrow(new PassageUnavailableException(true, null));
+        useConfig(stopsConfig(3));
+
+        var stops = service.next(1L).stops();
+
+        assertThat(stops.get(1).state()).isEqualTo(NextPassagesService.STATE_UNKNOWN_STOP);
+        assertThat(stops.get(0).passages()).hasSize(4);
+        assertThat(stops.get(2).passages()).hasSize(4);
     }
 
     @Test
@@ -174,13 +207,14 @@ class NextPassagesServiceTest {
         when(testGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
                 passage("C01154", now.plusSeconds(60)), passage("C01154", now.plusSeconds(300)),
                 passage("C01154", now.plusSeconds(600)), passage("C01154", now.plusSeconds(900)),
-                passage("C01154", now.plusSeconds(1200))), now));
+                passage("C01154", now.plusSeconds(1200)), passage("C01154", now.plusSeconds(1500)),
+                passage("C01154", now.plusSeconds(1800))), now));
 
         var first = service.next(1L);
         service.next(1L);
 
         assertThat(first.testMode()).isTrue();
-        assertThat(first.stops().getFirst().passages()).hasSize(4);
+        assertThat(first.stops().getFirst().passages()).hasSize(6);
         verify(testGateway, times(1)).fetch("24377");
         verifyNoInteractions(liveGateway, quota);
     }
@@ -256,6 +290,12 @@ class NextPassagesServiceTest {
     private void assertBadRequest(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
         assertThatThrownBy(call).isInstanceOfSatisfying(ApiException.class,
                 exception -> assertThat(exception.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    private static String stopsConfig(int count) {
+        return "{\"stops\":[" + IntStream.rangeClosed(1, count)
+                .mapToObj(index -> "{\"arrid\":\"" + index + "\",\"name\":\"S" + index + "\"}")
+                .collect(Collectors.joining(",")) + "]}";
     }
 
     private void useConfig(String configJson) {
