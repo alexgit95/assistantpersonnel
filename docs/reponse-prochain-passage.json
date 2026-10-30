@@ -1,0 +1,169 @@
+{
+  "Siri": {
+    "ServiceDelivery": {
+      "ResponseTimestamp": "2026-10-30T08:12:30.210Z",
+      "ProducerRef": "IVTR_HET",
+      "ResponseMessageIdentifier": "IVTR_HET:ResponseMessage:101c6e87-8689-4453-8510-98490806e4bd:LOC:",
+      "StopMonitoringDelivery": [
+        {
+          "ResponseTimestamp": "2026-10-30T08:12:30.213Z",
+          "Version": "2.0",
+          "Status": "true",
+          "MonitoredStopVisit": [
+            {
+              "RecordedAtTime": "2026-10-30T08:08:38.643Z",
+              "ItemIdentifier": "MeC_Bus_PC:Item::20261030.19.PALS.IDFM.C01154.R.EXP.50236375.96:LOC",
+              "MonitoringRef": {
+                "value": "STIF:StopPoint:Q:24377:"
+              },
+              "MonitoredVehicleJourney": {
+                "LineRef": {
+                  "value": "STIF:Line::C01154:"
+                },
+                "OperatorRef": {
+                  "value": "MeC_Bus_PC:Operator::1060:"
+                },
+                "FramedVehicleJourneyRef": {
+                  "DataFrameRef": {
+                    "value": "any"
+                  },
+                  "DatedVehicleJourneyRef": "MeC_Bus_PC:VehicleJourney::20261030.19.R.C01154:LOC"
+                },
+                "DirectionName": [
+                  {
+                    "value": "Porte d'Orléans"
+                  }
+                ],
+                "DestinationRef": {
+                  "value": "STIF:StopPoint:Q:22421:"
+                },
+                "DestinationName": [
+                  {
+                    "value": "Porte d'Orléans"
+                  }
+                ],
+                "VehicleJourneyName": [],
+                "JourneyNote": [],
+                "MonitoredCall": {
+                  "StopPointName": [
+                    {
+                      "value": "Carnot"
+                    }
+                  ],
+                  "VehicleAtStop": false,
+                  "DestinationDisplay": [
+                    {
+                      "value": "Porte d'Orleans"
+                    }
+                  ],
+                  "ExpectedDepartureTime": "2026-10-30T08:26:13.000Z",
+                  "DepartureStatus": "onTime",
+                  "ArrivalStatus": ""
+                },
+                "TrainNumbers": {
+                  "TrainNumberRef": []
+                },
+                "VehicleFeatureRef": [],
+                "DirectionRef": {
+                  "value": "Retour"
+                },
+                "DestinationShortName": [
+                  {
+                    "value": "Porte d'Orleans"
+                  }
+                ]
+              }
+            },
+            {
+              "RecordedAtTime": "2026-10-30T08:11:01.640Z",
+              "ItemIdentifier": "MeC_Bus_PC:Item::20261030.20.PALS.IDFM.C01154.R.EXP.50236375.96:LOC",
+              "MonitoringRef": {
+                "value": "STIF:StopPoint:Q:24377:"
+              },
+              "MonitoredVehicleJourney": {
+                "LineRef": {
+                  "value": "STIF:Line::C01154:"
+                },
+                "OperatorRef": {
+                  "value": "MeC_Bus_PC:Operator::1060:"
+                },
+                "FramedVehicleJourneyRef": {
+                  "DataFrameRef": {
+                    "value": "any"
+                  },
+                  "DatedVehicleJourneyRef": "MeC_Bus_PC:VehicleJourney::20261030.20.R.C01154:LOC"
+                },
+                "DirectionName": [
+                  {
+                    "value": "Porte d'Orléans"
+                  }
+                ],
+                "DestinationRef": {
+                  "value": "STIF:StopPoint:Q:22421:"
+                },
+                "DestinationName": [
+                  {
+                    "value": "Porte d'Orléans"
+                  }
+                ],
+                "VehicleJourneyName": [],
+                "JourneyNote": [],
+                "MonitoredCall": {
+                  "StopPointName": [
+                    {
+                      "value": "Carnot"
+                    }
+                  ],
+                  "VehicleAtStop": false,
+                  "DestinationDisplay": [
+                    {
+                      "value": "Porte d'Orleans"
+                    }
+                  ],
+                  "ExpectedDepartureTime": "2026-10-30T08:35:28.000Z",
+                  "DepartureStatus": "onTime",
+                  "ArrivalStatus": ""
+                },
+                "TrainNumbers": {
+                  "TrainNumberRef": []
+                },
+                "VehicleFeatureRef": [],
+                "DirectionRef": {
+                  "value": "Retour"
+                },
+                "DestinationShortName": [
+                  {
+                    "value": "Porte d'Orleans"
+                  }
+                ]
+              }
+            }
+          ],
+          "StopLineNotice": [],
+          "ServiceException": [
+            {
+              "RecordedAtTime": "2026-10-30T07:59:10.997Z",
+              "StopPointRef": {
+                "value": "STIF:StopPoint:Q:24377:"
+              },
+              "LineRef": {
+                "value": "STIF:Line::C01400:"
+              },
+              "DirectionRef": {
+                "value": "Aller"
+              },
+              "Notice": [
+                {
+                  "value": "SERVICE TERMINE\n.................."
+                }
+              ],
+              "ServiceStatus": {
+                "value": "afterLastJourney"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

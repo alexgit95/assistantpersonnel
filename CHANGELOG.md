@@ -2,6 +2,17 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.11]
+
+### Added
+- Widget « Prochains passages » (clé `transit-passages`, distinct de Transports) : jusqu'à 3 arrêts par profil, 4 prochains passages par arrêt affichés en « dans X min » avec ligne, destination et date de mise à jour. Message invitant à renseigner la clé PRIM si elle est absente.
+- API `/api/transit-passages` (`stops/search`, `stops`, `next`, session faciale requise, documentée Swagger) : recherche d'arrêts à la demande sur l'API publique IDFM `arrets` (3 à 100 caractères, 20 résultats, échappement du filtre, cache 5 min) sans téléchargement ni table locale ; appel PRIM `stop-monitoring` avec la clé existante, cache de 55 s par arrêt partagé entre profils et appels concurrents fusionnés, budget journalier et pause nocturne PRIM appliqués, dernières valeurs conservées, « Arrêt indisponible » sur HTTP 400.
+- Mode TEST : `docs/reponse-prochain-passage.json` (embarqué via `pom.xml`) rejoué avec des horaires aléatoires dans le futur, sans clé, appel externe ni budget ; la recherche d'arrêts est simulée (jeu local de 5 arrêts, même validation de la saisie).
+- Tests JUnit 5 / Mockito (recherche, parseur, clients, service, contrôleur) et test Node du widget.
+
+### Changed
+- Version du projet portée à 0.0.11 (`pom.xml`).
+
 ## [0.0.10]
 
 ### Added

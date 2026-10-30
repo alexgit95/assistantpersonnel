@@ -87,6 +87,9 @@ function createWidgetCard(app) {
   if (app.key === 'transit') {
     appendTransitConfiguration(card, app);
   }
+  if (app.key === 'transit-passages') {
+    appendTransitPassagesConfiguration(card, app);
+  }
   if (app.key === 'news') {
     appendNewsConfiguration(card, app);
   }
@@ -319,6 +322,138 @@ function appendTransitConfiguration(card, app) {
     result.textContent = error instanceof ApiError ? error.message : 'Lignes favorites indisponibles.';
   });
   card.append(form, results, favorites, save, result);
+}
+
+function appendTransitPassagesConfiguration(card, app) {
+  const MAX_STOPS = 3;
+  const form = document.createElement('form');
+  form.className = 'transit-config';
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.minLength = 3;
+  input.maxLength = 100;
+  input.placeholder = 'Nom d\'arrêt (3 caractères minimum)';
+  input.setAttribute('aria-label', 'Rechercher un arrêt');
+  const search = document.createElement('button');
+  search.type = 'submit';
+  search.textContent = 'Rechercher';
+  form.append(input, search);
+
+  const result = document.createElement('p');
+  result.className = 'transit-config-status';
+  result.setAttribute('role', 'status');
+  result.setAttribute('aria-live', 'polite');
+  const results = document.createElement('ul');
+  results.className = 'transit-config-results';
+  const selectedList = document.createElement('ul');
+  selectedList.className = 'transit-config-favorites';
+  selectedList.setAttribute('aria-label', 'Arrêts sélectionnés');
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.textContent = 'Enregistrer les arrêts';
+
+  let selected = [];
+  let candidates = [];
+  try {
+    const savedStops = JSON.parse(app.configJson || '{}').stops;
+    selected = Array.isArray(savedStops) ? savedStops.slice(0, MAX_STOPS) : [];
+  } catch {
+    selected = [];
+  }
+
+  const describe = (stop) => [stop.name, stop.town, stop.type].filter(Boolean).join(' · ');
+
+  const renderSelected = () => {
+    selectedList.replaceChildren();
+    selected.forEach((stop) => {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = describe(stop);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', `Retirer ${name.textContent}`);
+      remove.textContent = 'Retirer';
+      remove.addEventListener('click', () => {
+        selected = selected.filter((entry) => entry.arrid !== stop.arrid);
+        renderSelected();
+        renderResults();
+      });
+      item.append(name, remove);
+      selectedList.append(item);
+    });
+    result.textContent = `${selected.length} arrêt${selected.length > 1 ? 's' : ''} sélectionné${selected.length > 1 ? 's' : ''} sur ${MAX_STOPS}.`;
+  };
+
+  const renderResults = () => {
+    results.replaceChildren();
+    candidates.forEach((stop) => {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = describe(stop);
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.textContent = 'Ajouter';
+      add.disabled = selected.length >= MAX_STOPS || selected.some((entry) => entry.arrid === stop.arrid);
+      add.addEventListener('click', () => {
+        selected = [...selected, stop];
+        renderSelected();
+        renderResults();
+      });
+      item.append(name, add);
+      results.append(item);
+    });
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const query = input.value.trim();
+    if (query.length < 3) {
+      result.textContent = 'Saisissez au moins 3 caractères.';
+      return;
+    }
+    try {
+      candidates = await api.transitStopSearch(query);
+      renderResults();
+      result.textContent = candidates.length === 0 ? 'Aucun arrêt trouvé.' : `${candidates.length} arrêt(s) trouvé(s).`;
+    } catch (error) {
+      candidates = [];
+      renderResults();
+      result.textContent = error instanceof ApiError ? error.message : 'Recherche d\'arrêts indisponible.';
+    }
+  });
+
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      const saved = await api.saveTransitStops(selected);
+      selected = saved.stops;
+      let config;
+      try {
+        config = JSON.parse(app.configJson || '{}');
+      } catch {
+        config = {};
+      }
+      app.configJson = JSON.stringify({ ...config, stops: selected });
+      document.dispatchEvent(new CustomEvent('assistant:app-config-updated', {
+        detail: { key: app.key, configJson: app.configJson },
+      }));
+      renderSelected();
+      result.textContent = 'Arrêts enregistrés.';
+    } catch (error) {
+      result.textContent = error instanceof ApiError ? error.message : 'Enregistrement impossible.';
+    } finally {
+      save.disabled = false;
+    }
+  });
+  renderSelected();
+  api.transitStops().then((saved) => {
+    selected = saved.stops;
+    renderSelected();
+    renderResults();
+  }).catch((error) => {
+    result.textContent = error instanceof ApiError ? error.message : 'Arrêts enregistrés indisponibles.';
+  });
+  card.append(form, results, selectedList, save, result);
 }
 
 function appendNewsConfiguration(card, app) {

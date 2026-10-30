@@ -13,7 +13,7 @@
 
     <groupId>com.assistant</groupId>
     <artifactId>assistant</artifactId>
-    <version>0.0.10</version>
+    <version>0.0.11</version>
     <name>assistant</name>
     <description>Assistant personnel avec reconnaissance faciale cote navigateur</description>
 
@@ -106,6 +106,7 @@
                     <include>referentiel-des-lignes.json</include>
                     <include>response_info-traffic.json</include>
                     <include>response-open-meteo.json</include>
+                    <include>reponse-prochain-passage.json</include>
                 </includes>
             </resource>
         </resources>
