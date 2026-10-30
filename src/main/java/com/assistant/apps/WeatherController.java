@@ -75,7 +75,7 @@ public class WeatherController {
             description = "Quatre jours (aujourd'hui + trois) : matin (6-12 h) et après-midi (12-18 h) avec code WMO, "
                     + "risque de pluie, rafales maximales (km/h), alerte vent (> 50 km/h) et phrase de conseil.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Météo actuelle et prévisions"),
+            @ApiResponse(responseCode = "200", description = "Météo actuelle, prévisions et températures horaires avec l'heure courante des données"),
             @ApiResponse(responseCode = "400", description = "Aucune ville configurée",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Session absente ou expirée",

@@ -43,7 +43,9 @@ class WeatherServiceTest {
         when(profileApps.requireEnabled(1L, "weather")).thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
         when(profileApps.requireEnabled(2L, "weather")).thenReturn(new EnabledApp(new WeatherAssistantApp(), 0, config));
         WeatherForecast forecast = new WeatherForecast(location,
-                new WeatherForecast.CurrentConditions(15, 14, "Ciel dégagé"), List.of());
+            new WeatherForecast.CurrentConditions(15, 14, "Ciel dégagé"), List.of(), false, 3600,
+            List.of(new WeatherForecast.HourlyTemperature("2026-10-27T11:00", 13.5)),
+            "2026-10-27T10:00");
         when(gateway.forecast(location)).thenReturn(forecast);
 
         assertThat(service.forecast(1L)).isEqualTo(forecast);

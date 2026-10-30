@@ -2,7 +2,7 @@
     th:attr="data-config-json=${appConfigJson},data-test-mode=${testMode}">
     <p class="external-test-badge" data-external-test-mode hidden>MODE TEST</p>
     <p data-weather-status role="status" aria-live="polite" data-typewriter>Préparation de la météo…</p>
-    <section data-weather-current hidden>
+    <section class="weather-current" data-weather-current hidden>
         <article class="weather-today">
             <header class="weather-today-header">
                 <h3 data-weather-location></h3>
@@ -25,6 +25,20 @@
             <p class="weather-advice" data-weather-advice></p>
         </article>
         <ul class="weather-days" data-weather-days></ul>
+        <div class="weather-chart-stage" data-weather-chart-stage hidden>
+            <div class="weather-chart-frame">
+                <svg class="weather-chart" data-weather-chart viewBox="0 0 640 320" role="img"
+                     aria-label="Températures horaires">
+                    <title>Températures horaires</title>
+                    <line x1="100" y1="280" x2="620" y2="280"></line>
+                    <line data-weather-y-axis x1="100" y1="50" x2="100" y2="260"></line>
+                    <g data-weather-y-ticks></g>
+                    <path data-weather-line d=""></path>
+                    <g data-weather-points></g>
+                </svg>
+                <div class="weather-chart-labels" data-weather-labels aria-hidden="true"></div>
+            </div>
+        </div>
     </section>
     <p class="weather-config-required" data-weather-config-required hidden>Aucune ville configurée.</p>
 </div>

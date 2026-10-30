@@ -34,7 +34,8 @@ public class TestWeatherGateway {
     }
 
     public WeatherForecast forecast(WeatherLocation location) {
-                return new WeatherForecast(this.location, forecast.current(), forecast.days(), true);
+                return new WeatherForecast(this.location, forecast.current(), forecast.days(), true,
+                                forecast.utcOffsetSeconds(), forecast.hourly(), forecast.currentTime());
         }
 
         private static WeatherLocation location(JsonNode node) {

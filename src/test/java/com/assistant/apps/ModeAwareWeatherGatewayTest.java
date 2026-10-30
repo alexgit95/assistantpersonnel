@@ -32,6 +32,9 @@ class ModeAwareWeatherGatewayTest {
         assertThat(forecast.location().name()).isEqualTo("Paris");
         assertThat(forecast.current().description()).isEqualTo("Partiellement nuageux");
         assertThat(forecast.days()).hasSize(4);
+        assertThat(forecast.hourly()).hasSize(96);
+        assertThat(forecast.currentTime()).isEqualTo("2026-10-28T12:00");
+        assertThat(forecast.utcOffsetSeconds()).isEqualTo(3600);
         assertThat(forecast.testMode()).isTrue();
         verifyNoInteractions(live);
     }

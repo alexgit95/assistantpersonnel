@@ -35,6 +35,7 @@ public class ModeAwareWeatherGateway implements WeatherGateway {
     public WeatherForecast forecast(WeatherLocation location) {
         boolean testMode = mode.isTestMode();
         WeatherForecast forecast = testMode ? testGateway.forecast(location) : liveGateway.forecast(location);
-        return new WeatherForecast(forecast.location(), forecast.current(), forecast.days(), testMode);
+        return new WeatherForecast(forecast.location(), forecast.current(), forecast.days(), testMode,
+                forecast.utcOffsetSeconds(), forecast.hourly(), forecast.currentTime());
     }
 }

@@ -61,7 +61,19 @@ public class WeatherResponseParser {
             throw new WeatherUnavailableException(null);
         }
         return new WeatherForecast(location, conditions, List.copyOf(days), testMode,
-                response.path("utc_offset_seconds").asInt(0));
+                response.path("utc_offset_seconds").asInt(0), hourlyTemperatures(hourTimes, hourTemperatures),
+                current.hasNonNull("time") ? current.get("time").asString() : null);
+    }
+
+    private static List<WeatherForecast.HourlyTemperature> hourlyTemperatures(JsonNode times, JsonNode temperatures) {
+        int count = Math.min(times.size(), temperatures.size());
+        List<WeatherForecast.HourlyTemperature> hours = new ArrayList<>(count);
+        for (int index = 0; index < count; index++) {
+            JsonNode value = temperatures.get(index);
+            hours.add(new WeatherForecast.HourlyTemperature(times.get(index).asString(),
+                    value.isNumber() ? value.asDouble() : null));
+        }
+        return List.copyOf(hours);
     }
 
     private static WeatherForecast.ForecastDay parseDay(String date, int dayIndex, JsonNode hourly, JsonNode daily,

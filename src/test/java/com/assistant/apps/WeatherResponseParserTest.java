@@ -83,6 +83,52 @@ class WeatherResponseParserTest {
                 .isInstanceOf(WeatherUnavailableException.class);
     }
 
+    @Test
+    void exposesEveryHourlyTemperatureWithItsLocalTimeAndTheCurrentTime() throws IOException {
+        var forecast = parser.parseForecast(fixture().path("forecastResponse"), parisLocation(), true);
+
+        assertThat(forecast.hourly()).hasSize(96);
+        assertThat(forecast.hourly().getFirst().time()).isEqualTo("2026-10-28T00:00");
+        assertThat(forecast.hourly().getLast().time()).isEqualTo("2026-10-31T23:00");
+        assertThat(forecast.hourly()).allSatisfy(hour -> assertThat(hour.temperatureC()).isNotNull());
+        assertThat(forecast.currentTime()).isEqualTo("2026-10-28T12:00");
+    }
+
+    @Test
+    void keepsAMissingHourlyTemperatureAsNullWithoutShiftingTheOthers() throws IOException {
+        StringBuilder times = new StringBuilder();
+        StringBuilder temperatures = new StringBuilder();
+        StringBuilder codes = new StringBuilder();
+        for (int hour = 0; hour < 24; hour++) {
+            String separator = hour == 0 ? "" : ",";
+            times.append(separator).append(String.format("\"2026-10-28T%02d:00\"", hour));
+            temperatures.append(separator).append(hour == 3 ? "null" : String.valueOf(10 + hour));
+            codes.append(separator).append("1");
+        }
+        JsonNode response = objectMapper.readTree("{\"utc_offset_seconds\":3600,"
+                + "\"current\":{\"time\":\"2026-10-28T12:00\",\"temperature_2m\":15,\"apparent_temperature\":14,"
+                + "\"weather_code\":1},"
+                + "\"hourly\":{\"time\":[" + times + "],\"temperature_2m\":[" + temperatures + "],"
+                + "\"weather_code\":[" + codes + "]},"
+                + "\"daily\":{\"time\":[\"2026-10-28\"],\"precipitation_probability_max\":[0],"
+                + "\"wind_gusts_10m_max\":[10]}}");
+
+        var forecast = parser.parseForecast(response, parisLocation(), false);
+
+        assertThat(forecast.hourly()).hasSize(24);
+        assertThat(forecast.hourly().get(3).temperatureC()).isNull();
+        assertThat(forecast.hourly().get(4).temperatureC()).isEqualTo(14.0);
+        assertThat(forecast.hourly().get(4).time()).isEqualTo("2026-10-28T04:00");
+    }
+
+    @Test
+    void currentTimeIsNullWhenTheSourceOmitsIt() throws IOException {
+        var response = (tools.jackson.databind.node.ObjectNode) fixture().path("forecastResponse").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) response.path("current")).remove("time");
+
+        assertThat(parser.parseForecast(response, parisLocation(), true).currentTime()).isNull();
+    }
+
     private java.util.List<WeatherForecast.ForecastDay> parseFixtureDays() throws IOException {
         return parser.parseForecast(fixture().path("forecastResponse"), parisLocation(), true).days();
     }

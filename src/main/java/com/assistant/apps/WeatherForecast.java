@@ -4,15 +4,21 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record WeatherForecast(WeatherLocation location, CurrentConditions current, List<ForecastDay> days,
-                              boolean testMode, int utcOffsetSeconds) {
+                              boolean testMode, int utcOffsetSeconds, List<HourlyTemperature> hourly,
+                              String currentTime) {
 
     public WeatherForecast(WeatherLocation location, CurrentConditions current, List<ForecastDay> days) {
-        this(location, current, days, false, 0);
+        this(location, current, days, false, 0, List.of(), null);
     }
 
     public WeatherForecast(WeatherLocation location, CurrentConditions current, List<ForecastDay> days,
                            boolean testMode) {
-        this(location, current, days, testMode, 0);
+        this(location, current, days, testMode, 0, List.of(), null);
+    }
+
+    public WeatherForecast(WeatherLocation location, CurrentConditions current, List<ForecastDay> days,
+                           boolean testMode, int utcOffsetSeconds) {
+        this(location, current, days, testMode, utcOffsetSeconds, List.of(), null);
     }
 
     public record CurrentConditions(double temperatureC, double feelsLikeC, String description) {
@@ -24,5 +30,9 @@ public record WeatherForecast(WeatherLocation location, CurrentConditions curren
 
     public record ForecastDay(LocalDate date, DayPart morning, DayPart afternoon, int rainChancePercent,
                               int maxGustKmh, boolean windAlert, String advice) {
+    }
+
+    /** Heure locale ISO ("2026-10-28T14:00") et temperature ; nulle si la source n'en fournit pas. */
+    public record HourlyTemperature(String time, Double temperatureC) {
     }
 }

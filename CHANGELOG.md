@@ -2,6 +2,16 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.0.10]
+
+### Added
+- Widget Météo (bloc central uniquement) : courbe des températures horaires de maintenant − 3 h à maintenant + 24 h (28 points au plus), sous les jours suivants. Un cercle par heure, étiquettes sur le minimum, le maximum et l'heure courante, axe X gradué toutes les 6 h et axe Y avec cinq valeurs en °C et guides horizontaux, même style et mêmes effets de tracé et de retracé que le graphique du poids ; sans animation avec `prefers-reduced-motion`. Entre 0 h et 3 h la courbe commence à 0 h (pas de `past_days`).
+- `GET /api/weather` expose les températures horaires (`hourly` : heure locale ISO et température, nulle si absente) et l'heure courante des données (`currentTime`) ; aucun appel Open-Meteo supplémentaire. En mode TEST, la fenêtre est ancrée sur l'heure du fixture.
+
+### Changed
+- `ModeAwareWeatherGateway` et `TestWeatherGateway` conservent désormais le décalage UTC, les températures horaires et l'heure courante en reconstruisant la prévision (le décalage était perdu).
+- Version du projet portée à 0.0.10 (`pom.xml`).
+
 ## [0.0.9]
 
 ### Changed
