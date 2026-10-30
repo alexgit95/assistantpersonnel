@@ -23,6 +23,7 @@ body.home-body {
 }
  
 .identity {
+  --identity-icon: 3.8rem;
   position: relative;
   z-index: 3;
   display: flex;
@@ -59,8 +60,8 @@ body.home-body {
 
 .webcam-frame {
   position: relative;
-  width: 3.8rem;
-  height: 3.8rem;
+  width: var(--identity-icon);
+  height: var(--identity-icon);
   flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid var(--assistant-border-strong);
@@ -581,130 +582,131 @@ button {
   margin-bottom: 2.8rem;
 }
 
-.certificate-page {
-  display: flex;
-  min-height: 100dvh;
-  flex-direction: column;
-  overflow: auto;
+.qr-panel {
+  width: var(--identity-icon);
+  height: var(--identity-icon);
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--assistant-border-strong);
+  border-radius: var(--assistant-radius);
+  background: #fff;
 }
 
-.certificate-header {
+.identity-end {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--assistant-border);
 }
 
-.certificate-header h1 {
-  margin: 0;
-  font-size: 1.15rem;
+.qr-panel[hidden] {
+  display: none;
 }
 
-.certificate-content {
-  width: min(100% - 2rem, 48rem);
-  align-self: center;
-  padding: 1rem 0 2rem;
-  line-height: 1.5;
+.qr-link {
+  display: block;
+  color: inherit;
 }
 
-.certificate-content section {
-  padding: 0.35rem 0;
-  border-bottom: 1px solid var(--assistant-border);
-}
-
-.certificate-content h2 {
-  margin: 0.75rem 0 0.25rem;
-  font-size: 1rem;
-}
-
-.certificate-content p {
-  margin: 0.5rem 0;
-}
-
-.certificate-download {
-  display: inline-flex;
-  min-height: 2.5rem;
-  align-items: center;
-  margin: 0.5rem 0 1rem;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--assistant-fg);
-  border-radius: var(--assistant-radius);
-}
-
-.weight-form {
-  display: grid;
-  grid-template-columns: minmax(4rem, auto) minmax(8rem, 14rem) auto;
-  gap: 0.4rem 0.65rem;
-  align-items: center;
-  margin-top: auto;
-}
-
-.weight-form input {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.5rem;
-  background: var(--assistant-bg);
-  border: 1px solid var(--assistant-border-strong);
-  border-radius: var(--assistant-radius);
-}
-
-.weight-form button {
-  width: fit-content;
-  min-height: 2.25rem;
-}
-
-.weight-widget, .weight-card {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-}
-
-.weight-card {
-  perspective: 1200px;
-}
-
-.weight-card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.weight-card.is-flipped .weight-card-inner {
-  transform: rotateY(180deg);
-}
-
-.weight-card-face {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  overflow: hidden;
-  backface-visibility: hidden;
-}
-
-.weight-chart-face {
-  padding: 0.25rem 0.5rem;
-}
-
-.weight-chart-button {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
+.qr-link[href] {
   cursor: pointer;
 }
 
-.weight-chart-button:focus-visible {
-  outline-offset: -3px;
+.qr-image {
+  display: block;
+}
+
+.qr-image svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.capture-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.82);
+  color: var(--assistant-fg);
+  text-align: center;
+}
+
+.capture-overlay[hidden] {
+  display: none;
+}
+
+.capture-overlay p {
+  margin: 0;
+}
+
+.capture-title {
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+}
+
+.capture-count {
+  font-size: clamp(6rem, 24vw, 14rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.capture-hint {
+  max-width: 40ch;
+  font-size: clamp(1.2rem, 3vw, 2rem);
+}
+
+.capture-progress {
+  color: var(--assistant-muted);
+  font-size: 1.2rem;
+}
+
+.capture-message {
+  min-height: 1.5em;
+  color: var(--assistant-danger);
+  font-size: 1.2rem;
+}
+
+.weight-widget {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.weight-chart-face {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.25rem 0.5rem;
+}
+
+.weight-empty {
+  margin: 0.5rem 0 0;
+  color: var(--assistant-muted);
+  text-align: center;
+}
+
+.weight-qr {
+  display: grid;
+  flex: 0 0 auto;
+  width: min(var(--qr-size, 6.5rem), 22%);
+  gap: 0.35rem;
+  align-content: center;
+}
+
+.weight-qr[hidden] {
+  display: none;
 }
 
 .weight-chart-stage {
@@ -780,53 +782,6 @@ button {
   .weight-chart polyline.is-drawing {
     animation: none;
   }
-}
-
-.weight-measures-face {
-  padding: clamp(0.65rem, 3vh, 1.5rem) clamp(0.75rem, 5vw, 2rem);
-  transform: rotateY(180deg);
-}
-
-.weight-card-heading {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.weight-card-heading h3 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.weight-history {
-  display: grid;
-  min-height: 0;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  list-style: none;
-}
-
-.weight-history li {
-  min-width: 0;
-}
-
-.weight-measure {
-  width: 100%;
-  min-height: 2.5rem;
-  padding: 0.45rem 0.7rem;
-  border-color: var(--assistant-border);
-  text-align: left;
-}
-
-.weight-status {
-  min-height: 1.25rem;
-  margin: 0.35rem 0 0;
-  color: var(--assistant-muted);
-  font-size: 0.85rem;
 }
 
 .weather-widget {
@@ -1134,6 +1089,7 @@ button {
 
 @media (max-width: 520px) {
   .identity {
+    --identity-icon: 3rem;
     height: 4rem;
     min-height: 4rem;
     max-height: 4rem;
@@ -1248,21 +1204,6 @@ button {
     bottom: 0.5rem;
     min-height: 2rem;
     padding: 0.2rem 0.5rem;
-  }
-
-  .weight-form {
-    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
-    gap: 0.3rem;
-    font-size: 0.82rem;
-  }
-
-  .weight-form button {
-    grid-column: 1 / -1;
-    justify-self: end;
-  }
-
-  .weight-measures-face {
-    padding: 0.7rem;
   }
 
   .weight-chart-label {
@@ -1735,4 +1676,145 @@ button {
 
 .configuration-widget .news-config-status {
   white-space: normal;
+}
+
+.configuration-list-controls {
+  display: none;
+}
+
+/* Vue liste (smartphone) : pas de grille ni de glisser-déposer, réglages lisibles et manipulables au doigt. */
+@media (max-width: 720px) {
+  .configuration-grid {
+    display: none;
+  }
+
+  .configuration-page {
+    padding: 0.75rem;
+  }
+
+  #configuration-status {
+    font-size: 0.95rem;
+  }
+
+  .widget-pool {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: none;
+    gap: 0.75rem;
+    overflow: visible;
+    padding-bottom: 5rem;
+  }
+
+  .configuration-widget,
+  .widget-pool .configuration-widget {
+    max-width: none;
+    min-height: 0;
+    flex-basis: auto;
+    gap: 0.6rem;
+    overflow: visible;
+    padding: 0.85rem;
+    cursor: default;
+    touch-action: auto;
+  }
+
+  .configuration-widget h2 {
+    font-size: 1.1rem;
+  }
+
+  .configuration-widget p {
+    display: block;
+    font-size: 0.9rem;
+    white-space: normal;
+  }
+
+  .configuration-widget > select:not([id^="list-slot-"]) {
+    display: none;
+  }
+
+  .configuration-list-controls {
+    display: grid;
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .configuration-list-controls label:first-child {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+  }
+
+  .configuration-list-controls input[type="checkbox"] {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .configuration-widget select,
+  .configuration-widget input:not([type="checkbox"]),
+  .configuration-widget button {
+    min-height: 2.75rem;
+    box-sizing: border-box;
+    font-size: 1rem;
+  }
+
+  .configuration-widget select,
+  .configuration-widget input:not([type="checkbox"]) {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .configuration-widget .weather-config,
+  .configuration-widget .transit-config {
+    flex-wrap: wrap;
+  }
+
+  .configuration-widget .weather-config input,
+  .configuration-widget .transit-config input {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .configuration-widget .weather-config button,
+  .configuration-widget .transit-config button {
+    min-height: 2.75rem;
+    padding: 0.35rem 0.9rem;
+    font-size: 1rem;
+  }
+
+  .configuration-widget .weather-config-status,
+  .configuration-widget .transit-config-status,
+  .configuration-widget .news-config-status {
+    display: block;
+    font-size: 0.9rem;
+    white-space: normal;
+  }
+
+  .transit-config-results,
+  .transit-config-favorites,
+  .news-config-categories {
+    max-height: none;
+  }
+
+  .transit-config-results label,
+  .transit-config-favorites li,
+  .news-config-categories label {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .configuration-widget .transit-config-results button,
+  .configuration-widget .transit-config-favorites button {
+    min-height: 2.75rem;
+  }
+
+  .save-widget-layout {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    min-height: 3rem;
+    padding: 0.5rem 1.2rem;
+    background: var(--assistant-fg);
+    color: var(--assistant-bg);
+    font-weight: 700;
+  }
 }

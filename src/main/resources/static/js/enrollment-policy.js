@@ -17,13 +17,12 @@ export function assessEnrollmentCapture(detection, faces, currentProfileId, conf
   return { status: 'accepted', descriptor: detection.descriptor };
 }
 
-export function canChooseAvatar(captureCount, minPhotos) {
-  return captureCount >= minPhotos;
+export function canChooseAvatar(captureCount, photos) {
+  return captureCount === photos;
 }
 
-export function canSaveEnrollment(captureCount, minPhotos, maxPhotos, avatarIndex) {
-  return captureCount >= minPhotos
-    && captureCount <= maxPhotos
+export function canSaveEnrollment(captureCount, photos, avatarIndex) {
+  return captureCount === photos
     && Number.isInteger(avatarIndex)
     && avatarIndex >= 0
     && avatarIndex < captureCount;

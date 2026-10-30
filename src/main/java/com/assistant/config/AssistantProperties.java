@@ -23,7 +23,30 @@ public record AssistantProperties(
         @Valid @NotNull Ui ui,
         @Valid @NotNull Backup backup,
         @Valid @NotNull FaceAssets faceAssets,
-        @Valid @NotNull Prim prim) {
+        @Valid @NotNull Prim prim,
+        @NotNull @Pattern(regexp = "^$|^https?://[^\\s/]+(/\\S*[^\\s/])?$",
+                message = "URL http(s) attendue, sans slash final") String publicBaseUrl,
+        @Valid @NotNull Kiosk kiosk,
+        @Valid @NotNull Handoff handoff,
+        @Valid @NotNull Qr qr) {
+
+    /** Cle partagee avec le navigateur du Pi (vide = controle desactive, refuse en production) et cadence de son poll d'etat. */
+    public record Kiosk(
+            @NotNull String key,
+            @Min(250) @Max(60_000) int pollIdleMs,
+            @Min(250) @Max(60_000) int pollActiveMs) {
+    }
+
+    /** Jetons de transfert de session vers un smartphone et duree de ses sessions transitoires. */
+    public record Handoff(
+            @Min(10) @Max(600) int tokenTtlSeconds,
+            @Min(1) @Max(1440) int fullSessionMinutes,
+            @Min(1) @Max(1440) int weightSessionMinutes) {
+    }
+
+    /** Aides de developpement des QR (lien cliquable, URL affichee, bascule localhost / 127.0.0.1) et taille d'affichage en rem. */
+    public record Qr(boolean devMode, @DecimalMin("2.0") @DecimalMax("30.0") double sizeRem) {
+    }
 
     /** Acces PRIM (Ile-de-France Mobilites) : budget journalier d'appels, cache et pause nocturne (heure de Paris). */
     public record Prim(
@@ -64,13 +87,16 @@ public record AssistantProperties(
     }
 
     public record Enrollment(
-            @Min(1) @Max(30) int minPhotos,
-            @Min(1) @Max(30) int maxPhotos,
-            @Min(0) int maxProfiles) {
+            @Min(1) @Max(30) int photos,
+            @Min(0) int maxProfiles,
+            @Valid @NotNull Remote remote) {
 
-        @AssertTrue(message = "ASSISTANT_ENROLLMENT_MIN_PHOTOS doit etre inferieur ou egal a ASSISTANT_ENROLLMENT_MAX_PHOTOS")
-        public boolean isPhotoRangeValid() {
-            return minPhotos <= maxPhotos;
+        /** Capture a distance : le Pi prend les photos, le smartphone pilote. */
+        public record Remote(
+                @Min(1) @Max(60) int countdownSeconds,
+                @Min(1) @Max(60) int intervalSeconds,
+                @Min(1) @Max(120) int sessionTtlMinutes,
+                @Min(1) @Max(20) int maxConsecutiveFailures) {
         }
     }
 

@@ -20,7 +20,8 @@ public class AdminSecurityConfig {
             throws Exception {
         http.authenticationProvider(adminProvider)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/admin/login", "/", "/enroll", "/api/**", "/apps/**", "/css/**", "/js/**",
+                        .requestMatchers("/admin/login", "/", "/mobile/**", "/handoff", "/api/**", "/apps/**",
+                                "/css/**", "/js/**",
                                 "/vendor/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

@@ -19,7 +19,7 @@ public final class Fixtures {
                 new AssistantProperties.Session(10, 30, 60),
                 new AssistantProperties.Scan(1000, 5000),
                 new AssistantProperties.Recognition(0.55, 0.05, 2, 224, 0.5, 80, 640, Backend.AUTO, false),
-                new AssistantProperties.Enrollment(5, 8, maxProfiles),
+                new AssistantProperties.Enrollment(5, maxProfiles, new AssistantProperties.Enrollment.Remote(5, 4, 10, 3)),
                 new AssistantProperties.Weather(30),
                 new AssistantProperties.Ui(true, 25),
                 new AssistantProperties.Backup(50),
@@ -28,7 +28,30 @@ public final class Fixtures {
                     "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model",
                     "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.js",
                     "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/"),
-                new AssistantProperties.Prim(750, 10, "22:00", "05:00"));
+                new AssistantProperties.Prim(750, 10, "22:00", "05:00"),
+                "", new AssistantProperties.Kiosk("", 3000, 1000), new AssistantProperties.Handoff(120, 30, 10),
+                new AssistantProperties.Qr(false, 9.0));
+    }
+
+    public static AssistantProperties withQr(String publicBaseUrl, boolean devMode) {
+        var base = properties();
+        return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
+                base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), publicBaseUrl,
+                base.kiosk(), base.handoff(), new AssistantProperties.Qr(devMode, 9.0));
+    }
+
+    public static AssistantProperties withQrAndKioskKey(String publicBaseUrl, String kioskKey) {
+        var base = withKioskKey(kioskKey);
+        return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
+                base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), publicBaseUrl,
+                base.kiosk(), base.handoff(), base.qr());
+    }
+
+    public static AssistantProperties withKioskKey(String key) {
+        var base = properties();
+        return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
+                base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), base.publicBaseUrl(),
+                new AssistantProperties.Kiosk(key, 3000, 1000), base.handoff(), base.qr());
     }
 
     /** Vecteur de 128 valeurs ; deux bases differentes de 1.0 donnent une distance d'environ 11. */

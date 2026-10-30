@@ -19,9 +19,4 @@ public class HomeController {
     public String configuration() {
         return "configuration";
     }
-
-    @GetMapping("/enroll")
-    public String enrollment() {
-        return "enroll";
-    }
 }

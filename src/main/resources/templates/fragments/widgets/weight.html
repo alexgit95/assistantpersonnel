@@ -1,47 +1,18 @@
 <div th:fragment="content" class="weight-widget" data-weight-widget>
-    <div class="weight-card" data-weight-card>
-        <div class="weight-card-inner">
-            <section class="weight-card-face weight-chart-face" aria-label="Graphique du poids">
-                <button class="weight-chart-button" type="button" data-weight-open
-                        aria-label="Afficher les trois dernières mesures" title="Afficher les trois dernières mesures">
-                    <div class="weight-chart-stage">
-                        <svg class="weight-chart" data-weight-chart viewBox="0 0 640 320" role="img"
-                             aria-label="Évolution du poids">
-                            <title>Évolution du poids</title>
-                            <line x1="40" y1="280" x2="620" y2="280"></line>
-                            <polyline data-weight-line points=""></polyline>
-                            <g data-weight-points></g>
-                        </svg>
-                        <div class="weight-chart-labels" data-weight-labels aria-hidden="true"></div>
-                    </div>
-                </button>
-            </section>
-            <section class="weight-card-face weight-measures-face" aria-label="Dernières mesures de poids"
-                     aria-hidden="true" inert>
-                <header class="weight-card-heading">
-                    <h3>Dernières mesures</h3>
-                    <button class="icon-button" type="button" data-weight-back
-                            aria-label="Revenir au graphique" aria-expanded="false" title="Revenir au graphique">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"></path>
-                            <circle cx="7" cy="15" r="1"></circle>
-                            <circle cx="11" cy="11" r="1"></circle>
-                            <circle cx="14" cy="13" r="1"></circle>
-                            <circle cx="20" cy="6" r="1"></circle>
-                        </svg>
-                    </button>
-                </header>
-                <ol class="weight-history" data-weight-history aria-label="Trois dernières mesures"></ol>
-                <form class="weight-form" data-weight-form>
-                    <label for="weight-date">Date</label>
-                    <input id="weight-date" name="entryDate" type="date" required>
-                    <label for="weight-value">Poids (kg)</label>
-                    <input id="weight-value" name="value" type="text" inputmode="decimal" maxlength="16"
-                           autocomplete="off" placeholder="72,5" required>
-                    <button type="submit">Ajouter</button>
-                </form>
-                <p class="weight-status" data-weight-status role="status" aria-live="polite"></p>
-            </section>
+    <section class="weight-chart-face" aria-label="Graphique du poids">
+        <div class="weight-chart-stage">
+            <svg class="weight-chart" data-weight-chart viewBox="0 0 640 320" role="img"
+                 aria-label="Évolution du poids">
+                <title>Évolution du poids</title>
+                <line x1="40" y1="280" x2="620" y2="280"></line>
+                <polyline data-weight-line points=""></polyline>
+                <g data-weight-points></g>
+            </svg>
+            <div class="weight-chart-labels" data-weight-labels aria-hidden="true"></div>
         </div>
-    </div>
+        <p class="weight-empty" data-weight-empty hidden>Scannez pour saisir votre premier poids</p>
+    </section>
+    <aside class="weight-qr" data-weight-qr aria-label="Saisir son poids depuis un téléphone" hidden>
+        <a class="qr-link" data-weight-qr-link><span class="qr-image" data-weight-qr-image></span></a>
+    </aside>
 </div>

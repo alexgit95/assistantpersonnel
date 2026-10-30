@@ -42,9 +42,11 @@ public class ClientConfigController {
                 r.matchThreshold(), r.matchMargin(), r.switchConfirmations(), r.detectorInputSize(),
                 r.detectorMinConfidence(), r.minFaceSizePx(), r.cameraWidth(),
                 r.backend().name().toLowerCase(java.util.Locale.ROOT), r.debug(),
-                e.minPhotos(), e.maxPhotos(), ui.typingEnabled(), ui.typingSpeedMs(), EMBEDDING_SIZE,
+                e.photos(), ui.typingEnabled(), ui.typingSpeedMs(), EMBEDDING_SIZE,
                 assets.mode().name().toLowerCase(java.util.Locale.ROOT), assets.faceApiUrl(), assets.modelsUrl(),
-                assets.wasmScriptUrl(), assets.wasmUrl());
+                assets.wasmScriptUrl(), assets.wasmUrl(),
+                properties.kiosk().pollIdleMs(), properties.kiosk().pollActiveMs(), properties.qr().devMode(),
+                properties.qr().sizeRem());
     }
 
     public record ClientConfig(
@@ -62,8 +64,7 @@ public class ClientConfigController {
             int cameraWidth,
             String recognitionBackend,
             boolean recognitionDebug,
-            int enrollmentMinPhotos,
-            int enrollmentMaxPhotos,
+            int enrollmentPhotos,
             boolean typingEnabled,
             int typingSpeedMs,
             int embeddingSize,
@@ -71,6 +72,10 @@ public class ClientConfigController {
             String faceApiUrl,
             String faceModelsUrl,
             String wasmScriptUrl,
-            String wasmUrl) {
+            String wasmUrl,
+            int kioskPollIdleMs,
+            int kioskPollActiveMs,
+            boolean qrDevMode,
+            double qrSizeRem) {
     }
 }

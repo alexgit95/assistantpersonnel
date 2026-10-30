@@ -12,7 +12,8 @@ class QuietHoursTest {
 
     private static QuietHours at(String instant, String from, String to) {
         var prim = new AssistantProperties.Prim(750, 15, from, to);
-        var properties = new AssistantProperties(null, null, null, null, null, null, null, null, prim);
+        var properties = new AssistantProperties(null, null, null, null, null, null, null, null, prim,
+                null, null, null, null);
         return new QuietHours(properties, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }
 

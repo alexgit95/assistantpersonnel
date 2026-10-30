@@ -1,8 +1,10 @@
 import { api, ApiError } from './api.js';
 import { createProfileMenu } from './profile-menu.js';
-import { moveWidget, SLOT_NAMES, toAppSelections, UNASSIGNED_SLOT } from './configuration-state.js';
+import { moveWidget, SLOT_NAMES, toAppSelections, toggleWidget, UNASSIGNED_SLOT } from './configuration-state.js';
 
 const profileMenu = createProfileMenu();
+const LIST_VIEW_QUERY = '(max-width: 720px)';
+const isListView = () => window.matchMedia?.(LIST_VIEW_QUERY).matches ?? false;
 const pool = document.getElementById('widget-pool');
 const grid = document.getElementById('configuration-grid');
 const status = document.getElementById('configuration-status');
@@ -79,7 +81,7 @@ function createWidgetCard(app) {
     preferences = moveWidget(preferences, app.key, Number(select.value));
     render();
   });
-  card.append(heading, description, assignment, select);
+  card.append(heading, description, assignment, select, createListControls(app, select));
 
   if (app.key === 'weather') {
     appendWeatherConfiguration(card, app);
@@ -110,6 +112,35 @@ function createWidgetCard(app) {
     grid.querySelectorAll('.is-drop-target').forEach((slot) => slot.classList.remove('is-drop-target'));
   });
   return card;
+}
+
+/** Vue liste (petit écran) : interrupteur et emplacement visibles, sans glisser-déposer. */
+function createListControls(app, desktopSelect) {
+  const controls = document.createElement('div');
+  controls.className = 'configuration-list-controls';
+  const toggleLabel = document.createElement('label');
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.checked = app.enabled;
+  toggle.addEventListener('change', () => {
+    preferences = toggleWidget(preferences, app.key, toggle.checked);
+    render();
+  });
+  toggleLabel.append(toggle, document.createTextNode(' Afficher sur l’écran'));
+
+  const placeLabel = document.createElement('label');
+  placeLabel.htmlFor = `list-slot-${app.key}`;
+  placeLabel.textContent = 'Emplacement';
+  const select = desktopSelect.cloneNode(true);
+  select.id = `list-slot-${app.key}`;
+  select.value = desktopSelect.value;
+  select.disabled = !app.enabled;
+  select.addEventListener('change', () => {
+    preferences = moveWidget(preferences, app.key, Number(select.value));
+    render();
+  });
+  controls.append(toggleLabel, placeLabel, select);
+  return controls;
 }
 
 function appendWeatherConfiguration(card, app) {
@@ -560,7 +591,7 @@ pool.addEventListener('drop', (event) => {
 
 function installPointerDragging() {
   document.addEventListener('pointerdown', (event) => {
-    if (event.pointerType === 'mouse') return;
+    if (event.pointerType === 'mouse' || isListView()) return;
     const card = event.target.closest('.configuration-widget');
     if (!card || event.target.closest('input, select, button, textarea')) return;
     pointerDrag = { key: card.dataset.appKey, x: event.clientX, y: event.clientY, moved: false };
@@ -611,7 +642,6 @@ async function start() {
     const [profile, apps] = await Promise.all([api.profile(), api.apps()]);
     profileMenu.setProfile(profile);
     greeting.textContent = profile.name;
-    document.getElementById('create-profile').hidden = true;
     document.getElementById('unrecognized-help').hidden = true;
     preferences = apps.map((app) => ({ ...app }));
     render();

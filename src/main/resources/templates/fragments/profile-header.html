@@ -16,6 +16,10 @@
             </section>
         </div>
     </div>
+    <div class="identity-end">
+    <aside id="qr-panel" class="qr-panel" th:if="${withCamera}" aria-label="Accès depuis un téléphone" hidden>
+        <a id="qr-link" class="qr-link"><span id="qr-image" class="qr-image"></span></a>
+    </aside>
     <div class="profile-menu">
         <button id="profile-menu-trigger" class="profile-avatar-button avatar-hex" type="button"
                 aria-label="Ouvrir le menu du profil" aria-haspopup="true" aria-expanded="false"
@@ -30,12 +34,10 @@
         </button>
         <nav id="profile-menu" class="profile-menu-panel" aria-label="Menu du profil" hidden>
             <a id="menu-configuration" role="menuitem" th:href="@{/configuration}" hidden>Configuration</a>
-            <a id="create-profile" role="menuitem" th:href="@{/enroll}">Créer un profil</a>
             <p id="unrecognized-help" role="note" hidden>Pas reconnu ? Demandez à l'administrateur de purger l'ancien profil.</p>
-            <a role="menuitem" th:href="@{/certificat}">Certificat HTTPS</a>
             <a role="menuitem" th:href="@{/admin}">Administration</a>
-            <a id="recapture-profile" role="menuitem" th:href="@{/enroll(mode='recapture')}" hidden>Refaire mes captures</a>
             <button id="logout" type="button" role="menuitem" hidden>Déconnexion</button>
         </nav>
+    </div>
     </div>
 </header>

@@ -22,6 +22,20 @@ Pour lancer les tests et générer le rapport JaCoCo :
 - Réglages exposés au navigateur : `GET /api/config`.
 - Le build Docker (`Dockerfile`) compile avec le Maven Wrapper ; l'image est publiée par la CI existante.
 
+### Lancer et tester (développeur)
+
+1. **Lancer** : commande ci-dessus. La clé de kiosque est facultative en profil `local` (`ASSISTANT_KIOSK_KEY` vide = contrôle désactivé, avec un avertissement) ; en production elle est obligatoire et le Pi ouvre `http://localhost:8080/?kiosk=<clé>`.
+2. **Tests Java** : `mvn clean test` (JUnit 5 + Mockito + MockMvc). Rapports dans `target/surefire-reports/`, couverture dans `target/site/jacoco/`.
+3. **Tests JavaScript** (Node 22 ou plus, sans dépendance) : `node --test src/test/js/*.test.mjs` depuis la racine du projet.
+4. **Simuler le Pi et le smartphone sur un seul poste** : le mode développement des QR (`ASSISTANT_QR_DEV_MODE`, vrai par défaut en profil `local`) rend le QR cliquable (l'URL est dans l'info-bulle).
+   - Onglet « Pi » : `http://localhost:8080` (autorise la webcam).
+   - Un clic sur le QR ouvre un nouvel onglet « smartphone » sur `http://127.0.0.1:8080/...` : l'hôte est inversé (`localhost` ⇄ `127.0.0.1`), donc les cookies sont distincts de ceux du Pi, comme sur deux appareils.
+   - Pour tester avec un vrai téléphone sur le même réseau, définis `ASSISTANT_PUBLIC_BASE_URL=http://<ip-du-poste>:8080` (le QR encode alors cette adresse).
+   - Invité : le QR du Pi mène à l'enrôlement (nom, démarrage, la caméra du Pi prend les photos, choix de la miniature, validation). Connecté : le QR du Pi ouvre une session temporaire sur le smartphone (30 min, ou 10 min pour le QR du poids) sans fermer celle du Pi.
+   - Pour raccourcir les essais : `ASSISTANT_ENROLLMENT_PHOTOS=3` et `ASSISTANT_ENROLLMENT_REMOTE_COUNTDOWN_SECONDS=1`.
+5. **API** : tout se teste aussi depuis Swagger. Les appels du Pi (login, heartbeat, session de capture, état du kiosque) demandent l'en-tête `X-Kiosk-Key` quand une clé est configurée.
+6. **Repartir de zéro** : supprime `assistant-local.db` (SQLite) ; Hibernate recrée les tables au démarrage. Pour un essai jetable, définis `SPRING_DATASOURCE_URL=jdbc:sqlite:./target/essai.db?foreign_keys=on`.
+
 ## Reconnaissance faciale (navigateur)
 
 La détection et le calcul des empreintes tournent dans le navigateur avec `@vladmandic/face-api` ; ni le flux caméra ni ses images ne sont envoyés au CDN.
@@ -53,25 +67,60 @@ Tests de la logique du navigateur (sans dépendance, hors CI) : `node --test src
 ```env
 POSTGRES_PASSWORD=un-mot-de-passe-solide
 ASSISTANT_ADMIN_PASSWORD=un-autre-mot-de-passe-solide
+ASSISTANT_KIOSK_KEY=une-cle-partagee-avec-le-navigateur-du-pi
+ASSISTANT_PUBLIC_BASE_URL=http://192.168.1.50:8080
 APP_IMAGE=<utilisateur-dockerhub>/assistant:latest
-ASSISTANT_DOMAIN=assistant.lan
 ```
 
-3. Déployer. Ouvrir `https://assistant.lan` (le nom doit résoudre vers le Raspberry Pi : DNS du routeur ou fichier `hosts`).
+3. Déployer. Ouvrir `http://localhost:8080` sur le Raspberry Pi (contexte sécurisé : la caméra fonctionne) et `http://<ip-du-pi>:8080` depuis un autre appareil du réseau local.
 
-Le Caddyfile est inclus dans le compose (`configs`), aucun fichier externe n'est nécessaire. Caddy sert directement `/root.crt` depuis son volume de données en HTTP et HTTPS, sans le faire lire par l'application ; les autres requêtes HTTP sont redirigées vers HTTPS. Le build Docker récupère face-api 1.7.15 et tfjs-backend-wasm 4.22.0 et les embarque dans l'image ; les navigateurs du LAN n'ont donc pas besoin d'accéder au CDN.
+L'application est servie en HTTP sur le réseau local (port `APP_PORT`, 8080 par défaut), sans reverse proxy, sans certificat et sans nom de domaine. Le build Docker récupère face-api 1.7.15 et tfjs-backend-wasm 4.22.0 et les embarque dans l'image ; les navigateurs du LAN n'ont donc pas besoin d'accéder au CDN.
 
-## HTTPS et certificat
+## Réseau : HTTP sur le LAN
 
-La caméra exige HTTPS. Caddy génère une autorité interne (`tls internal`). Avant la première connexion HTTPS, télécharge le certificat depuis `http://assistant.lan/root.crt` (remplace le nom par `ASSISTANT_DOMAIN`) et installe-le **une fois par appareil**. Après installation, la page d'aide est accessible sur `https://assistant.lan/certificat` et son bouton télécharge le même fichier.
+- Le Raspberry Pi **doit** ouvrir l'application en `http://localhost:8080` : `localhost` est un contexte sécurisé et autorise la caméra. Depuis `http://<ip-du-pi>:8080`, la caméra serait bloquée.
+- Les smartphones et autres appareils du LAN utilisent `http://<ip-du-pi>:8080`. Réserver une adresse IP fixe au Pi (réservation DHCP) et désactiver l'isolation des clients Wi-Fi du routeur.
+- Le trafic n'est pas chiffré : réseau local protégé (WPA2/WPA3), aucune redirection de port depuis Internet, `/admin` depuis un poste de confiance. Le cookie de session d'administration n'est donc pas marqué `Secure` par défaut.
+- PostgreSQL n'est pas publié : seul le port de l'application l'est.
+- Les QR n'encodent que `ASSISTANT_PUBLIC_BASE_URL` (jamais l'hôte de la page) ; avec une valeur vide et hors mode développement, ils sont désactivés avec un avertissement dans les logs.
 
-- Windows : double-clic sur `root.crt` > Installer le certificat > Ordinateur local > placer dans « Autorités de certification racines de confiance ».
-- Android : Paramètres > Sécurité (ou Sécurité et confidentialité) > Installer un certificat > Certificat CA ; les menus varient selon le fabricant.
-- iPhone et iPad : ouvrir `root.crt`, installer le profil, puis Réglages > Général > Informations > Réglages du certificat et activer la confiance totale pour cette autorité.
+## Lancement du navigateur du Pi (kiosque)
+
+Le navigateur du Raspberry Pi s'ouvre en plein écran sur `http://localhost:8080/?kiosk=<ASSISTANT_KIOSK_KEY>`, par exemple :
+
+```bash
+chromium-browser --kiosk --noerrdialogs "http://localhost:8080/?kiosk=une-cle-partagee-avec-le-navigateur-du-pi"
+```
+
+La clé est lue une fois, gardée en `sessionStorage` puis retirée de la barre d'adresse ; elle est envoyée dans l'en-tête `X-Kiosk-Key` sur les appels réservés au Pi (connexion, prolongation, session de capture, état du kiosque, émission des QR). Sans clé valide, ces appels répondent 403 : un smartphone ne peut pas se faire passer pour le Pi. L'écran du Pi n'est pas tactile : tout passe par les QR ci-dessous.
+
+## Parcours avec le smartphone (QR)
+
+| Situation | QR affiché sur le Pi | Menu du smartphone (`/mobile`) |
+|---|---|---|
+| Personne n'est connecté | QR invité (`/mobile?s=<jeton>`) | Créer mon profil, Administration |
+| Un profil est connecté | QR menu (`/handoff?t=<jeton>`, usage unique, renouvelé dès qu'il est scanné) | Configuration, Poids, Refaire mes captures, Administration, Se déconnecter |
+| Widget poids du profil connecté | QR poids (usage unique) | `/mobile/weight` seulement, session de 10 minutes |
+
+1. **Créer un profil** : le smartphone scanne le QR invité, saisit son nom et lance la capture. L'écran du Pi affiche un compte à rebours puis une consigne de pose par photo ; le smartphone suit la progression, choisit l'avatar parmi les miniatures et valide. Un seul smartphone peut piloter une capture (le premier qui la lance).
+2. **Connecté** : le smartphone qui scanne le QR menu reçoit une session temporaire (30 minutes, jamais prolongée) sans fermer celle du Pi. Elle donne accès à la configuration des widgets (liste adaptée au petit écran), au poids, à la recapture et à la déconnexion.
+3. **Poids** : le widget du Pi n'affiche que le graphique et le QR poids ; la saisie, la correction et la suppression des mesures se font sur `/mobile/weight`.
+4. **Administration** : « Administration » ouvre `/admin/login`, toujours protégée par l'authentification administrateur, utilisable sur smartphone.
+5. **Refaire mes captures** : depuis un smartphone connecté, la caméra du Pi reprend les photos du profil connecté sur l'écran ; le smartphone choisit Ajouter ou Remplacer.
+
+Les sessions de smartphone sont transitoires et disparaissent à leur expiration, même si le Pi s'est déconnecté entre-temps. Les jetons de QR expirent après `ASSISTANT_HANDOFF_TOKEN_TTL_SECONDS` et sont révoqués à la déconnexion ou à la bascule de profil du Pi, à la suppression d'un profil et après une restauration de sauvegarde.
+
+## Migration depuis la 0.x
+
+1. Renseigner `ASSISTANT_KIOSK_KEY` (obligatoire, le démarrage échoue sinon) et `ASSISTANT_PUBLIC_BASE_URL` (IP du Pi).
+2. Retirer de la stack `ASSISTANT_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`, `ASSISTANT_ENROLLMENT_MIN_PHOTOS`, `ASSISTANT_ENROLLMENT_MAX_PHOTOS` et `ASSISTANT_CERTIFICATE_ROOT_PATH`, puis utiliser le nouveau `docker-compose.yml` (Caddy retiré, port 8080 publié).
+3. Changer l'adresse du navigateur du Pi (voir ci-dessus) et désactiver l'isolation Wi-Fi du routeur.
+4. Les colonnes `scope` et `source` de `app_session` sont créées au démarrage par Hibernate ; les sessions existantes deviennent `FULL` / `FACE`. Aucune donnée de profil n'est modifiée.
+5. Retour arrière : redéployer l'image 0.0.13 avec l'ancien compose.
 
 ## Réglages par variables d'environnement
 
-Toutes les variables sont facultatives (valeur par défaut) sauf `POSTGRES_PASSWORD` et `ASSISTANT_ADMIN_PASSWORD`.
+Toutes les variables sont facultatives (valeur par défaut) sauf `POSTGRES_PASSWORD`, `ASSISTANT_ADMIN_PASSWORD` et, en production, `ASSISTANT_KIOSK_KEY`.
 
 | Variable | Défaut | Rôle |
 |---|---|---|
@@ -96,8 +145,20 @@ Toutes les variables sont facultatives (valeur par défaut) sauf `POSTGRES_PASSW
 | `ASSISTANT_SWITCH_CONFIRMATIONS` | 2 | Détections consécutives pour basculer vers un autre profil |
 | `ASSISTANT_HEARTBEAT_MIN_INTERVAL_SECONDS` | 30 | Délai minimal entre deux prolongations de session |
 | `ASSISTANT_MAX_PROFILES` | 0 | Nombre max de profils (0 = illimité) |
-| `ASSISTANT_ENROLLMENT_MIN_PHOTOS` | 5 | Captures minimales à la création |
-| `ASSISTANT_ENROLLMENT_MAX_PHOTOS` | 8 | Captures maximales |
+| `ASSISTANT_ENROLLMENT_PHOTOS` | 8 | Nombre de captures valides d'un enrôlement (remplace `ASSISTANT_ENROLLMENT_MIN_PHOTOS` et `ASSISTANT_ENROLLMENT_MAX_PHOTOS`, supprimées) |
+| `ASSISTANT_ENROLLMENT_REMOTE_COUNTDOWN_SECONDS` | 5 | Compte à rebours initial de la capture à distance |
+| `ASSISTANT_ENROLLMENT_REMOTE_INTERVAL_SECONDS` | 4 | Intervalle entre deux captures |
+| `ASSISTANT_ENROLLMENT_REMOTE_SESSION_TTL_MINUTES` | 10 | Durée de vie d'une session de capture sans interaction |
+| `ASSISTANT_ENROLLMENT_REMOTE_MAX_CONSECUTIVE_FAILURES` | 3 | Captures rejetées consécutives avant abandon |
+| `ASSISTANT_PUBLIC_BASE_URL` | (vide) | URL encodée dans les QR, ex. `http://192.168.1.50:8080` (adresse IP du Pi, sans slash final) ; vide = QR désactivés |
+| `ASSISTANT_KIOSK_KEY` | (obligatoire en production) | Clé partagée avec le navigateur du Pi pour les appels réservés au Pi ; vide accepté uniquement en profil `local` |
+| `ASSISTANT_KIOSK_POLL_IDLE_MS` | 3000 | Intervalle d'interrogation de l'état par le Pi au repos |
+| `ASSISTANT_KIOSK_POLL_ACTIVE_MS` | 1000 | Intervalle d'interrogation de l'état pendant une capture |
+| `ASSISTANT_HANDOFF_TOKEN_TTL_SECONDS` | 120 | Durée de vie d'un jeton de QR |
+| `ASSISTANT_HANDOFF_FULL_SESSION_MINUTES` | 30 | Durée de la session d'un smartphone (accès complet) |
+| `ASSISTANT_HANDOFF_WEIGHT_SESSION_MINUTES` | 10 | Durée de la session d'un smartphone limitée au poids |
+| `ASSISTANT_QR_DEV_MODE` | false (`true` en profil `local`) | Aides de développement des QR : lien cliquable (URL dans l'info-bulle), bascule `localhost` ⇄ `127.0.0.1` |
+| `ASSISTANT_QR_SIZE_REM` | 6.5 | Taille du QR du widget poids en rem (2 à 30). Le QR de l'en-tête du Pi a toujours la taille de l'icône webcam (3,8 rem) ; en dessous de 6 rem environ, un QR se scanne mal à distance |
 | `ASSISTANT_WEATHER_CACHE_MINUTES` | 30 | Durée du cache météo |
 | `ASSISTANT_PRIM_DAILY_BUDGET` | 750 | Budget journalier PRIM persisté, inférieur au quota de 800 |
 | `ASSISTANT_PRIM_CACHE_MINUTES` | 10 | Intervalle d'actualisation du flux global PRIM |
@@ -110,8 +171,8 @@ Toutes les variables sont facultatives (valeur par défaut) sauf `POSTGRES_PASSW
 | `ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS` | 5 | Échecs de connexion avant blocage temporaire |
 | `ASSISTANT_ADMIN_LOCKOUT_MINUTES` | 15 | Durée du blocage après trop d'échecs |
 | `ASSISTANT_ADMIN_SESSION_TIMEOUT` | 15m | Durée de la session web administrateur |
-| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | false en local, true dans Docker | Exige HTTPS pour envoyer le cookie de session admin |
-| `ASSISTANT_DOMAIN` | assistant.lan | Nom d'hôte servi par Caddy |
+| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | false | Exige HTTPS pour envoyer le cookie de session admin ; à laisser à `false` en HTTP (un cookie `Secure` est rejeté) |
+| `APP_PORT` | 8080 | Port publié par l'application dans le compose |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | assistant / assistant / (obligatoire) | Base PostgreSQL |
 | `SPRING_PROFILES_ACTIVE` | prod | `local` = SQLite pour le développement |
 | `JAVA_TOOL_OPTIONS` | `-XX:+UseSerialGC -Xmx384m -Xss512k` | Réglages JVM adaptés au Raspberry Pi 4 |
@@ -158,21 +219,21 @@ La CI GitHub publie une image `linux/arm64` sur Docker Hub : `<utilisateur>/assi
 
 ## Fonctionnement
 
-- Création de profil (`/enroll`) : nom puis 5 à 8 captures guidées. Une capture sans visage, trop petit, déjà connu ou ambigu est refusée. L'utilisateur choisit l'avatar parmi les captures ; seules les empreintes et cette image réduite à 128x128 sont envoyées et conservées.
-- Après création, le profil est connecté automatiquement. Depuis la session, « Refaire mes captures » permet d'ajouter des empreintes ou de remplacer les anciennes et de choisir un nouvel avatar.
-- Si la personne n'est plus reconnue, l'accueil propose de créer un profil ou de contacter l'administrateur pour purger l'ancien ; un profil existant ne peut pas être modifié sans sa session.
-- Interface : thème commun `theme.css` (fond noir OLED, texte blanc, police, espacements), appliqué à l'accueil, l'enrôlement et l'administration. Les textes apparaissent progressivement ; le texte complet reste accessible, l'animation respecte `prefers-reduced-motion` et s'arrête pour les chaînes longues.
+- Création de profil : depuis le QR affiché par le Pi, le smartphone ouvre `/mobile` puis `/mobile/enroll`, saisit le nom et lance la capture ; la caméra du Pi prend les `ASSISTANT_ENROLLMENT_PHOTOS` photos (8 par défaut) avec un compte à rebours et des consignes de pose affichés à l'écran. Une capture sans visage, trop petit, déjà connu ou ambigu est refusée et reprise ; après `ASSISTANT_ENROLLMENT_REMOTE_MAX_CONSECUTIVE_FAILURES` rejets consécutifs la capture est abandonnée. Le smartphone choisit ensuite l'avatar et valide ; seules les empreintes et cette image réduite à 128x128 sont envoyées et conservées. Il n'y a plus de page d'enrôlement sur le Pi.
+- Après création, le smartphone reçoit une session temporaire (30 minutes, non prolongée) ; le Pi, lui, reconnaît le nouveau profil à son prochain passage devant la caméra.
+- Si la personne n'est plus reconnue, l'accueil affiche le QR invité (créer un profil ou ouvrir l'administration) ; un profil existant ne peut pas être modifié sans sa session.
+- Interface : thème commun `theme.css` (fond noir OLED, texte blanc, police, espacements), appliqué à l'accueil, aux pages du smartphone et à l'administration. Les textes apparaissent progressivement ; le texte complet reste accessible, l'animation respecte `prefers-reduced-motion` et s'arrête pour les chaînes longues.
 - Administration : `/admin/login`, identifiant `ASSISTANT_ADMIN_USERNAME` et mot de passe obligatoire (12 caractères minimum) `ASSISTANT_ADMIN_PASSWORD`. Spring Security hache le mot de passe avec BCrypt ; la session admin distincte de la reconnaissance faciale utilise un cookie HttpOnly/SameSite Strict, expire selon `ASSISTANT_ADMIN_SESSION_TIMEOUT` et exige Secure dans Docker. Après `ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS` erreurs, la connexion est bloquée pendant `ASSISTANT_ADMIN_LOCKOUT_MINUTES`. L'administrateur ne voit que noms/avatars et peut purger un profil avec confirmation ; la purge supprime aussi ses empreintes, sessions et données.
 - Clé PRIM : elle se saisit uniquement depuis `/admin` (enregistrer, remplacer, supprimer ; jamais réaffichée, stockée en clair en base) et s'applique sans redémarrage. La variable `ASSISTANT_PRIM_API_KEY` n'existe plus : après mise à jour, ressaisis la clé. Tant qu'aucune clé n'est enregistrée, aucun appel PRIM n'est émis et le quota n'est pas consommé.
-- Défilement : seul l'accueil est verrouillé ; `/configuration` (avec son icône de retour à l'accueil), `/admin` et `/enroll` défilent si leur contenu dépasse la fenêtre.
-- Accueil sans défilement : l'horloge et l'aperçu webcam « W » restent en haut à gauche, le menu du profil en haut à droite, avec un widget principal et quatre widgets secondaires dans des emplacements fixes. Le poids est la vue principale par défaut ; le graphique affiche les valeurs en kg près des points et se trace progressivement, sauf si `prefers-reduced-motion` est actif. Le clic retourne sa carte pour montrer trois mesures et l'ajout. Les affectations et réglages s'ouvrent depuis le menu de l'avatar, sur `/configuration` ; les widgets se déplacent par glisser-déposer ou avec le sélecteur d'emplacement, puis sont enregistrés pour le profil.
+- Défilement : seul l'accueil est verrouillé ; `/configuration` (avec son icône de retour à l'accueil), `/admin` et les pages `/mobile` défilent si leur contenu dépasse la fenêtre.
+- Accueil sans défilement : l'horloge et l'aperçu webcam « W » restent en haut à gauche, le menu du profil en haut à droite, avec un widget principal et quatre widgets secondaires dans des emplacements fixes. Le poids est la vue principale par défaut ; le graphique affiche les valeurs en kg près des points et se trace progressivement, sauf si `prefers-reduced-motion` est actif. Le widget n'a ni formulaire ni face arrière : il montre le graphique et un QR poids (jeton à usage unique, session smartphone limitée au poids pendant 10 minutes) ; sans mesure, il invite à « scanner pour saisir votre premier poids ». La saisie, la modification et la suppression se font sur `/mobile/weight`. Les affectations et réglages s'ouvrent depuis le menu de l'avatar, sur `/configuration` ; les widgets se déplacent par glisser-déposer ou avec le sélecteur d'emplacement, puis sont enregistrés pour le profil.
 - Applications : « Suivi du poids » accepte un poids de 20,0 à 400,0 kg avec un chiffre après la virgule ou le point, et permet de modifier/supprimer ses propres mesures via l'API. « Météo » recherche une ville depuis `/configuration` et affiche, en emplacement principal, un carré pour aujourd'hui (ville, « Maintenant » avec température et ressenti, matin et après-midi avec température et picto, risque de pluie, phrase de conseil au tutoiement) puis trois lignes pour les trois jours suivants ; en emplacement secondaire, seul le carré du jour est affiché. Le matin est le minimum de 6 h à 12 h et l'après-midi le maximum de 12 h à 18 h, avec le code météo le plus sévère de la plage. Les pictos sont des SVG monochromes (`/img/weather-icons.svg`) et un picto vent apparaît quand des rafales de plus de 50 km/h sont attendues. La durée est figée à 4 jours (la variable `ASSISTANT_WEATHER_FORECAST_DAYS` n'existe plus). Le widget « Transports » permet de choisir jusqu'à quatre lignes favorites IDFM par profil depuis le référentiel local `docs/referentiel-des-lignes.json`; le flux PRIM global est filtré par identifiant de ligne et partagé entre profils. Il est actualisé toutes les 10 minutes entre 5 h et 22 h (heure de Paris), avec affichage de l'heure de dernière actualisation. Les alertes sévères sont mises en avant; leur `message` est consultable en détail comme texte sans exécuter le HTML reçu. Le titre, le résumé et les détails sont réécrits toutes les 15 à 60 secondes. Le compteur journalier PRIM est persisté et borné par `ASSISTANT_PRIM_DAILY_BUDGET`.
 - Mode TEST : l'administrateur peut le basculer depuis `/admin`. Les widgets météo et Transports utilisent alors des réponses locales, notamment `docs/response_info-traffic.json` et `docs/response-open-meteo.json`, sans appel externe ni consommation du quota PRIM. En météo, la recherche renvoie toujours Paris, quelle que soit la saisie; la prévision reprend Paris et les données de son fixture. Le simple basculement n'écrase pas la ville enregistrée du profil. Les widgets affichent un badge MODE TEST. Le proxy HTTP/HTTPS sortant se configure aussi depuis `/admin`; ses réglages et le mode TEST ne sont pas inclus dans les sauvegardes.
 - Les lignes et les alertes affichées par le widget Transports sont réécrites indépendamment toutes les 15 à 60 secondes avec un curseur clignotant. Cette animation respecte le réglage d'écriture et `prefers-reduced-motion`; elle n'ajoute pas d'appel PRIM.
 - Courbe de température du widget Météo : dans le bloc central, sous les jours suivants, une courbe horaire de maintenant − 3 h à maintenant + 24 h (un cercle par heure, étiquettes sur le minimum, le maximum et l'heure courante, axe X gradué toutes les 6 h et axe Y avec cinq valeurs en °C et lignes guides), tracée et retracée comme le graphique du poids. Les températures horaires viennent de la même requête Open-Meteo que le reste (`hourly` et `currentTime` dans `/api/weather`) ; entre 0 h et 3 h elle commence à 0 h, et en mode TEST elle est centrée sur l'heure du fixture. Elle n'apparaît pas dans les emplacements secondaires.
 - Actualisation du widget Transports : le serveur n'interroge PRIM qu'une fois toutes les 10 minutes au plus (tolérance de 5 s sur l'échéance pour ne pas sauter une actualisation planifiée). Le navigateur relit le serveur toutes les 60 s, sans appel PRIM supplémentaire, et ne met l'affichage à jour (heure, lignes, animation) que si l'horodatage, le message d'état ou l'état de pause ont changé ; en cas d'échec, l'affichage précédent est conservé.
 - Widget « Prochains passages » (clé `transit-passages`, distinct de Transports) : depuis `/configuration`, le profil recherche des arrêts par nom (3 caractères minimum, 20 résultats, API publique Île-de-France Mobilités `arrets`, sans clé ni référentiel local) et en enregistre jusqu'à 3 dans sa configuration (identifiant `arrid`, nom, ville, type). Pour chaque arrêt, le widget affiche les 6 prochains passages (4 lorsque 3 arrêts sont enregistrés) en « dans X min » (« À l'approche » sous la minute) avec ligne, destination et date de mise à jour. Le serveur appelle l'API PRIM `stop-monitoring` (`MonitoringRef = STIF:StopPoint:Q:<arrid>:`) avec la clé PRIM de l'administration ; le navigateur relit le serveur toutes les 60 s uniquement tant que la session faciale est ouverte, et la réponse de chaque arrêt est mise en cache environ 55 s et partagée entre profils. Le budget journalier PRIM et la pause nocturne s'appliquent (dernières valeurs conservées) ; sans clé PRIM, le widget invite à la renseigner et aucun appel n'est émis. En mode TEST, `docs/reponse-prochain-passage.json` est rejoué avec des horaires aléatoires dans le futur et la recherche d'arrêts est simulée (jeu local de 5 arrêts, sans appel externe). Un arrêt que PRIM rejette (400) s'affiche « Arrêt indisponible » et peut être retiré ; les arrêts enregistrés ne sont pas revérifiés. API : `/api/transit-passages` (`stops/search`, `stops`, `next`), documentée dans Swagger.
-- Écran invité : quand aucune session faciale n'est valide (chargement, déconnexion, expiration, pause de reconnaissance), l'accueil affiche les widgets d'un profil « Invité » global, créé au démarrage et après chaque restauration de sauvegarde. Par défaut Météo en haut à gauche et Actualités en haut à droite ; l'horloge, la webcam et « Créer un profil » restent inchangés, et dès qu'un visage est reconnu les widgets du profil prennent la place. L'administrateur règle l'invité dans `/admin/guest` (lien depuis `/admin`) : application de chacun des 5 emplacements parmi les applications autorisées (Météo et Actualités seulement, liste blanche `AssistantApp.guestAllowed()` vérifiée côté serveur : le poids n'est jamais servi sans session), ville de la météo (recherche puis choix) et catégories d'actualités. Sans ville ou sans catégorie le widget affiche « À configurer par l'administrateur. » ; tant que l'administrateur n'a rien enregistré pour les actualités, toutes les catégories s'affichent. Sans session, seules les lectures annotées `@AllowGuest` (liste des applications, fragments, `/api/weather`, `/api/news/feed`) répondent, avec `Cache-Control: no-store` ; les écritures, la connexion au profil invité et `/configuration` restent refusées. L'invité n'apparaît ni dans la reconnaissance, ni dans la liste d'administration, ni dans `ASSISTANT_MAX_PROFILES`, et ne peut pas être purgé. Après un départ sans déconnexion l'écran invité revient à l'expiration de la session (`ASSISTANT_SESSION_DURATION_MINUTES`).
+- Écran invité : quand aucune session faciale n'est valide (chargement, déconnexion, expiration, pause de reconnaissance), l'accueil affiche les widgets d'un profil « Invité » global, créé au démarrage et après chaque restauration de sauvegarde. Par défaut Météo en haut à gauche et Actualités en haut à droite ; l'horloge, la webcam et le QR invité restent inchangés, et dès qu'un visage est reconnu les widgets du profil prennent la place. L'administrateur règle l'invité dans `/admin/guest` (lien depuis `/admin`) : application de chacun des 5 emplacements parmi les applications autorisées (Météo et Actualités seulement, liste blanche `AssistantApp.guestAllowed()` vérifiée côté serveur : le poids n'est jamais servi sans session), ville de la météo (recherche puis choix) et catégories d'actualités. Sans ville ou sans catégorie le widget affiche « À configurer par l'administrateur. » ; tant que l'administrateur n'a rien enregistré pour les actualités, toutes les catégories s'affichent. Sans session, seules les lectures annotées `@AllowGuest` (liste des applications, fragments, `/api/weather`, `/api/news/feed`) répondent, avec `Cache-Control: no-store` ; les écritures, la connexion au profil invité et `/configuration` restent refusées. L'invité n'apparaît ni dans la reconnaissance, ni dans la liste d'administration, ni dans `ASSISTANT_MAX_PROFILES`, et ne peut pas être purgé. Après un départ sans déconnexion l'écran invité revient à l'expiration de la session (`ASSISTANT_SESSION_DURATION_MINUTES`).
 - Toutes les dates des widgets sont affichées en français (`fr-FR`) et les données de poids comme la ville météo sont filtrées par le profil de la session.
 - Affichage : le widget Transports place en tête les lignes perturbées (ordre des favoris conservé par ailleurs) ; une annonce sans compte à rebours affiche sa date de fin (`jj/mm/aaaa à hh:mm`) ; l'avatar du profil est un hexagone à côté plat en haut sur tous les écrans ; sans profil connecté, le menu du profil n'affiche ni « Configuration », ni « Refaire mes captures », ni « Déconnexion » (« Administration » reste visible).
 - Actualités : l'administrateur crée depuis `/admin` des catégories (nom, URL d'un flux RSS ou Atom en `https`, position d'affichage), les modifie ou les supprime après confirmation (les profils qui l'avaient cochée l'ignorent ensuite). Depuis `/configuration`, chaque profil coche les catégories à afficher. Le widget montre une catégorie à la fois (10 entrées au plus) : titres en effet machine à écrire, clic sur un titre pour déplier la description en texte brut (aucun HTML, image ni lien). Avec plusieurs catégories, la suivante s'affiche après 15 s sans action, des flèches permettent de naviguer (en boucle) et un clic sur une flèche ou une entrée remet le compteur à zéro ; tant qu'une entrée est dépliée la rotation est suspendue, et l'entrée se replie seule après 20 s (nouveau compteur de 15 s). Une seule catégorie : ni rotation ni flèches.

@@ -2,22 +2,6 @@
 name: assistant
 
 services:
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "${HTTPS_PORT:-443}:443"
-      - "${HTTP_PORT:-80}:80"
-    configs:
-      - source: caddyfile
-        target: /etc/caddy/Caddyfile
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - app
-    mem_limit: 64m
-
   app:
     image: alexdock95/assistantpersonnel:latest
     restart: unless-stopped
@@ -48,8 +32,20 @@ services:
       ASSISTANT_SWITCH_CONFIRMATIONS: ${ASSISTANT_SWITCH_CONFIRMATIONS:-2}
       ASSISTANT_HEARTBEAT_MIN_INTERVAL_SECONDS: ${ASSISTANT_HEARTBEAT_MIN_INTERVAL_SECONDS:-30}
       ASSISTANT_MAX_PROFILES: ${ASSISTANT_MAX_PROFILES:-0}
-      ASSISTANT_ENROLLMENT_MIN_PHOTOS: ${ASSISTANT_ENROLLMENT_MIN_PHOTOS:-5}
-      ASSISTANT_ENROLLMENT_MAX_PHOTOS: ${ASSISTANT_ENROLLMENT_MAX_PHOTOS:-8}
+      ASSISTANT_ENROLLMENT_PHOTOS: ${ASSISTANT_ENROLLMENT_PHOTOS:-8}
+      ASSISTANT_ENROLLMENT_REMOTE_COUNTDOWN_SECONDS: ${ASSISTANT_ENROLLMENT_REMOTE_COUNTDOWN_SECONDS:-5}
+      ASSISTANT_ENROLLMENT_REMOTE_INTERVAL_SECONDS: ${ASSISTANT_ENROLLMENT_REMOTE_INTERVAL_SECONDS:-4}
+      ASSISTANT_ENROLLMENT_REMOTE_SESSION_TTL_MINUTES: ${ASSISTANT_ENROLLMENT_REMOTE_SESSION_TTL_MINUTES:-10}
+      ASSISTANT_ENROLLMENT_REMOTE_MAX_CONSECUTIVE_FAILURES: ${ASSISTANT_ENROLLMENT_REMOTE_MAX_CONSECUTIVE_FAILURES:-3}
+      ASSISTANT_PUBLIC_BASE_URL: ${ASSISTANT_PUBLIC_BASE_URL:-}
+      ASSISTANT_KIOSK_KEY: ${ASSISTANT_KIOSK_KEY:?ASSISTANT_KIOSK_KEY obligatoire}
+      ASSISTANT_KIOSK_POLL_IDLE_MS: ${ASSISTANT_KIOSK_POLL_IDLE_MS:-3000}
+      ASSISTANT_KIOSK_POLL_ACTIVE_MS: ${ASSISTANT_KIOSK_POLL_ACTIVE_MS:-1000}
+      ASSISTANT_HANDOFF_TOKEN_TTL_SECONDS: ${ASSISTANT_HANDOFF_TOKEN_TTL_SECONDS:-120}
+      ASSISTANT_HANDOFF_FULL_SESSION_MINUTES: ${ASSISTANT_HANDOFF_FULL_SESSION_MINUTES:-30}
+      ASSISTANT_HANDOFF_WEIGHT_SESSION_MINUTES: ${ASSISTANT_HANDOFF_WEIGHT_SESSION_MINUTES:-10}
+      ASSISTANT_QR_DEV_MODE: ${ASSISTANT_QR_DEV_MODE:-false}
+      ASSISTANT_QR_SIZE_REM: ${ASSISTANT_QR_SIZE_REM:-6.5}
       ASSISTANT_WEATHER_CACHE_MINUTES: ${ASSISTANT_WEATHER_CACHE_MINUTES:-30}
       ASSISTANT_PRIM_DAILY_BUDGET: ${ASSISTANT_PRIM_DAILY_BUDGET:-750}
       ASSISTANT_PRIM_CACHE_MINUTES: ${ASSISTANT_PRIM_CACHE_MINUTES:-10}
@@ -62,12 +58,12 @@ services:
       ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS: ${ASSISTANT_ADMIN_MAX_FAILED_ATTEMPTS:-5}
       ASSISTANT_ADMIN_LOCKOUT_MINUTES: ${ASSISTANT_ADMIN_LOCKOUT_MINUTES:-15}
       ASSISTANT_ADMIN_SESSION_TIMEOUT: ${ASSISTANT_ADMIN_SESSION_TIMEOUT:-15m}
-      SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:-true}
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:-false}
     depends_on:
       db:
         condition: service_healthy
-    expose:
-      - "8080"
+    ports:
+      - "${APP_PORT:-8080}:8080"
     mem_limit: 512m
 
   db:
@@ -86,39 +82,5 @@ services:
       retries: 5
     mem_limit: 256m
 
-configs:
-  caddyfile:
-    content: |
-      {
-        local_certs
-      }
-      http://${ASSISTANT_DOMAIN:-assistant.lan} {
-        @root_certificate path /root.crt
-        handle @root_certificate {
-          root * /data/caddy/pki/authorities/local
-          header Content-Type application/x-x509-ca-cert
-          header Content-Disposition "attachment; filename=root.crt"
-          file_server
-        }
-        handle {
-          redir https://${ASSISTANT_DOMAIN:-assistant.lan}{uri} permanent
-        }
-      }
-      ${ASSISTANT_DOMAIN:-assistant.lan} {
-        tls internal
-        @root_certificate path /root.crt
-        handle @root_certificate {
-          root * /data/caddy/pki/authorities/local
-          header Content-Type application/x-x509-ca-cert
-          header Content-Disposition "attachment; filename=root.crt"
-          file_server
-        }
-        handle {
-          reverse_proxy app:8080
-        }
-      }
-
 volumes:
-  caddy_data:
-  caddy_config:
   db_data:

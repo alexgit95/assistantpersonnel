@@ -42,7 +42,21 @@ public class SessionInterceptor implements HandlerInterceptor {
         }
         request.setAttribute(AuthenticatedSession.REQUEST_ATTRIBUTE, session
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Session absente ou expiree.")));
+        session.filter(s -> s.scope() == SessionScope.WEIGHT && !weightAllows(request)).ifPresent(s -> {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Cette session est limitee a la saisie du poids.");
+        });
         return true;
+    }
+
+    /** Une session WEIGHT n'ouvre que le poids et sa propre identite (liste blanche, tout le reste est refuse). */
+    private static boolean weightAllows(HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return underPath(path, "/api/weight") || underPath(path, "/mobile/weight")
+                || path.equals("/api/auth/session") || path.equals("/api/auth/logout");
+    }
+
+    private static boolean underPath(String path, String prefix) {
+        return path.equals(prefix) || path.startsWith(prefix + "/");
     }
 
     private static boolean requiresSession(HandlerMethod method) {

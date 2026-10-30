@@ -2,6 +2,43 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [1.0.0] - 2026-10-30
+
+### Added
+- Clé de kiosque (`ASSISTANT_KIOSK_KEY`) : l'en-tête `X-Kiosk-Key` est exigé sur `POST /api/auth/login` et `POST /api/auth/heartbeat` (`@KioskOnly`, `KioskKeyInterceptor`, 403 sinon, comparaison en temps constant). Le démarrage échoue en profil `prod` si la clé est vide ; en profil `local` une clé vide désactive le contrôle avec un avertissement (`KioskStartupCheck`). Le navigateur du Pi la lit dans `?kiosk=` (`kiosk-key.js`), la conserve en `sessionStorage` et la retire de la barre d'adresse.
+- Nouvelles propriétés : `assistant.public-base-url`, `assistant.kiosk.*` (clé, cadence du poll), `assistant.enrollment.photos` et `assistant.enrollment.remote.*` (compte à rebours, intervalle, durée de vie, échecs consécutifs), `assistant.handoff.*` (durée des jetons et des sessions de smartphone), `assistant.qr.dev-mode` (vrai en profil `local`), avec leurs variables d'environnement et validations.
+- Tests JUnit 5 / Mockito (propriétés, intercepteur, accès login/heartbeat, démarrage) et test Node de la clé de kiosque.
+- Session de capture à distance (`/api/enrollment-sessions`) : une seule session en mémoire (`WAITING`→`COUNTDOWN`→`CAPTURING`→`REVIEW`→`DONE`/`CANCELLED`/`EXPIRED`), jetons d'appairage et de prise en main, premier smartphone gagnant, compte à rebours et captures pilotés par le serveur, abandon après N rejets consécutifs, validation avec choix de la miniature (création du profil et session du smartphone). `GET /api/kiosk/state` donne au Pi l'état des QR suivis et de la capture. Fonctionnel : le smartphone saisit le nom et lance la capture, la caméra du Pi prend les photos.
+- Jeton de transfert (`POST /api/session/handoff`, `GET /handoff?t=`) : QR à usage unique (256 bits, haché, 2 actifs au plus par profil et portée, plafond global) qui ouvre sur le smartphone une session transitoire `FULL` (30 min) ou `WEIGHT` (10 min), jamais prolongée. Les sessions portent une portée (`scope`) et une origine (`source`) ; la portée `WEIGHT` est limitée à `/api/weight/**` et `/api/auth/session` par liste blanche (403 sinon). Les jetons et sessions de capture sont révoqués à la suppression d'un profil, à la déconnexion ou bascule du Pi, à `invalidateAll` et après une restauration de sauvegarde.
+- `QrUrlResolver` : URL publique configurée en priorité ; en mode développement bascule `localhost` ⇄ `127.0.0.1` (cookies distincts pour simuler le smartphone) ; sinon QR désactivés avec un avertissement.
+- Côté Pi : bibliothèque QR (MIT) embarquée sous `/vendor/qrcode/`, module `qr-code.js`, panneau QR (invité, ou connecté avec régénération automatique), `kiosk.js` (poll, capture pilotée, reprise de la reconnaissance), `remote-capture.js` (consignes de pose, compte à rebours basé sur l'horloge serveur), calque de guidage plein écran. En mode développement le QR est cliquable (nouvel onglet) et son URL figure dans l'info-bulle. Les QR s'affichent seuls, sans légende ni URL en dessous.
+- Tests : services, contrôleurs MockMvc, concurrence des jetons, portée `WEIGHT`, résolveur d'URL, modules JS (`remote-capture`, `qr-code`).
+- Pages du smartphone (`MobileController`, ouvertes dans `AdminSecurityConfig`, `no-store` et `no-referrer`) : `/mobile` (menu selon l'état : invité avec `?s=`, session `FULL`, session `WEIGHT`, sans jeton ; le jeton d'appairage est gardé en `sessionStorage` puis retiré de l'URL), `/mobile/enroll` (nom, lancement, suivi n/N et rejets, choix de la miniature, validation, relance, annulation) et `/mobile/weight` (liste paginée, ajout pré-rempli au dernier relevé avec clavier décimal et validation identique au serveur, modification, suppression). Fonctionnel : tout se fait au téléphone, sans écran tactile sur le Pi.
+- `GET /api/enrollment-sessions/current` (en-tête `X-Pairing-Token`) : le QR invité ne contient que le jeton d'appairage, le smartphone retrouve ainsi l'identifiant de la session en attente. `GET /api/auth/session` renvoie aussi la portée (`scope`).
+- Widget poids : QR poids (jeton `WEIGHT` à usage unique, renouvelé dès qu'il est scanné ou 15 s avant expiration par `qr-ticket.js`) et message « Scannez pour saisir votre premier poids » quand il n'y a aucune mesure.
+- Recapture depuis le smartphone : « Refaire mes captures » dans `/mobile` (session `FULL`), sans nom, avec choix Ajouter ou Remplacer et choix du nouvel avatar ; le Pi ne l'accepte que si le profil connecté sur l'écran est celui de la recapture.
+- Configuration et administration sur smartphone : vue liste de `/configuration` sous 720 px (interrupteur « Afficher sur l'écran » et emplacement par application, réglages des widgets lisibles, sans glisser-déposer, `toggleWidget` dans `configuration-state.js`) ; `/admin/login`, `/admin` et `/admin/guest` en champs pleine largeur et cibles tactiles de 44 px.
+- Tests : MockMvc des pages mobiles et de la recherche par jeton d'appairage, tests Node de `mobile-menu`, `mobile-enroll-flow`, `weight-input`, `qr-ticket` et de la vue liste.
+
+### Changed
+- Déploiement : application servie en HTTP sur le LAN, port publié (`APP_PORT`, 8080 par défaut), cookie de session admin non `Secure` par défaut (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`, un cookie `Secure` est rejeté en HTTP), `server.forward-headers-strategy=none`. README mis à jour (Raspberry Pi en `localhost`, smartphones par adresse IP).
+- Enrôlement : une seule propriété `assistant.enrollment.photos` (8 par défaut) remplace le minimum et le maximum ; la création d'un profil exige exactement ce nombre de captures et la mise à jour des empreintes en accepte au plus ce nombre. `GET /api/config` expose `enrollmentPhotos` (à la place de `enrollmentMinPhotos` et `enrollmentMaxPhotos`).
+- Sessions : le heartbeat ne prolonge pas les sessions issues d'un transfert (durée fixe) ; `ProfileService.validateName`, `validateAvatar` et `MAX_AVATAR_LENGTH` deviennent publics pour la session de capture ; `GET /api/config` expose `kioskPollIdleMs`, `kioskPollActiveMs` et `qrDevMode` ; `docs/database.puml` : colonnes `scope` et `source` de `app_session`.
+- Widget poids : plus de retournement, d'historique court ni de formulaire sur le Pi ; il affiche le graphique et le QR poids. `WeightAssistantApp` décrit la saisie depuis le téléphone ; le widget reste réservé aux profils connectés.
+- Menu du profil sur le Pi : « Créer un profil » et « Refaire mes captures » disparaissent (remplacés par le QR).
+- `enrollment-policy.js` : `canChooseAvatar` et `canSaveEnrollment` exigent exactement N captures.
+- QR plus compacts : correction d'erreur L et marge d'un module (moins de modules, donc un QR lisible à taille réduite), taille d'affichage du QR du widget poids réglable par `ASSISTANT_QR_SIZE_REM` (6,5 par défaut, 2 à 30) exposée dans `GET /api/config` (`qrSizeRem`). Le QR menu du Pi est dans l'en-tête, à côté de la photo de profil, à la taille de l'icône webcam.
+- Version du projet portée à 1.0.0 (`pom.xml`) : rupture de configuration et de déploiement (voir Removed). Migration depuis la 0.x : renseigner `ASSISTANT_KIOSK_KEY` et `ASSISTANT_PUBLIC_BASE_URL`, retirer les variables supprimées, lancer le navigateur du Pi sur `http://localhost:8080/?kiosk=<clé>` ; les colonnes `scope` et `source` sont créées par Hibernate (sessions existantes : `FULL` et `FACE`).
+
+### Fixed
+- `POST /api/auth/login` n'est plus appelable par n'importe quel appareil du réseau avec un simple `profileId` : il exige la clé de kiosque (l'ancienne page `/enroll` qui en dépendait n'existe plus).
+
+### Removed
+- Caddy, `ASSISTANT_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`, les volumes Caddy et le Caddyfile du `docker-compose.yml`.
+- Route `/root.crt` (`RootCertificateController`), page d'aide `/certificat`, lien « Certificat HTTPS » du menu et variable `ASSISTANT_CERTIFICATE_ROOT_PATH`.
+- Variables `ASSISTANT_ENROLLMENT_MIN_PHOTOS` et `ASSISTANT_ENROLLMENT_MAX_PHOTOS`.
+- Ancien enrôlement sur le Pi : page `/enroll` (`enroll.html`, `enrollment.js`, `enrollment.css`) et son entrée dans `AdminSecurityConfig`.
+
 ## [0.0.13]
 
 ### Changed

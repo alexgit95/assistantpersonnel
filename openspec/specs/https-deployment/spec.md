@@ -1,6 +1,6 @@
 # Purpose
 
-Define LAN-only HTTPS deployment, root certificate distribution, Portainer stack requirements, and runtime configuration.
+Define LAN-only HTTP deployment (no TLS reverse proxy, certificate or domain name), Portainer stack requirements, and runtime configuration.
 
 ## Requirements
 

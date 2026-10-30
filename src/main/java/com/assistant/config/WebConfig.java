@@ -2,6 +2,7 @@ package com.assistant.config;
 
 import com.assistant.auth.AuthenticatedSessionArgumentResolver;
 import com.assistant.auth.SessionInterceptor;
+import com.assistant.kiosk.KioskKeyInterceptor;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.context.annotation.Configuration;
@@ -15,14 +16,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final SessionInterceptor sessionInterceptor;
+    private final KioskKeyInterceptor kioskKeyInterceptor;
 
-    public WebConfig(SessionInterceptor sessionInterceptor) {
+    public WebConfig(SessionInterceptor sessionInterceptor, KioskKeyInterceptor kioskKeyInterceptor) {
         this.sessionInterceptor = sessionInterceptor;
+        this.kioskKeyInterceptor = kioskKeyInterceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(sessionInterceptor).addPathPatterns("/api/**", "/apps/**", "/configuration");
+        registry.addInterceptor(kioskKeyInterceptor).addPathPatterns("/api/**").order(0);
+        registry.addInterceptor(sessionInterceptor).addPathPatterns("/api/**", "/apps/**", "/configuration", "/mobile/**").order(1);
     }
 
     @Override

@@ -6,6 +6,10 @@ import { createRecognizer, RecognizerError } from './recognizer.js';
 import { SessionMachine, State } from './session-machine.js';
 import { animateMarkedText, typeText } from './typewriter.js';
 import { createProfileMenu } from './profile-menu.js';
+import { captureKioskKey } from './kiosk-key.js';
+import { createKiosk } from './kiosk.js';
+
+captureKioskKey(window.sessionStorage, window.location, window.history);
 
 const FACES_REFRESH_MS = 60_000;
 const UNKNOWN_FACES_REFRESH_MS = 10_000;
@@ -19,8 +23,8 @@ const MESSAGES = {
 
 const el = Object.fromEntries(
   ['camera', 'clock', 'status', 'greeting', 'avatar', 'timer', 'logout', 'debug', 'asset-loading',
-    'asset-loading-label', 'asset-progress', 'asset-percent', 'unrecognized-help', 'create-profile',
-    'recapture-profile', 'menu-configuration', 'apps'].map((id) => [id, document.getElementById(id)]),
+    'asset-loading-label', 'asset-progress', 'asset-percent', 'unrecognized-help',
+    'menu-configuration', 'apps'].map((id) => [id, document.getElementById(id)]),
 );
 const profileMenu = createProfileMenu();
 const dashboardSlots = new Map([...document.querySelectorAll('#apps [data-slot-index]')]
@@ -35,6 +39,8 @@ let facesLoadedAt = 0;
 let lastObservation = { status: 'none' };
 let appPreferences = [];
 let wake = () => {};
+let kiosk = null;
+let capturePaused = false;
 
 function setStatus(text) {
   typeText(el.status, text, typingOptions());
@@ -78,8 +84,6 @@ function render() {
   el.timer.textContent = connected ? `Session : ${formatClock(machine.remainingSeconds(now))}` : '';
   el.logout.hidden = !connected;
   el['unrecognized-help'].hidden = connected;
-  el['create-profile'].hidden = connected;
-  el['recapture-profile'].hidden = !connected;
   animateMarkedText(document, typingOptions());
 
   if (machine.state === State.PAUSED) {
@@ -190,6 +194,9 @@ async function execute(actions) {
       handleApiFailure(action, error);
     }
   }
+  if (actions.some((action) => ['login', 'logout', 'expired'].includes(action.type))) {
+    kiosk?.poke();
+  }
 }
 
 function handleApiFailure(action, error) {
@@ -217,7 +224,7 @@ function sleep(ms) {
 async function loop() {
   for (;;) {
     await execute(machine.tick(Date.now()));
-    if (machine.state !== State.PAUSED && !document.hidden) {
+    if (machine.state !== State.PAUSED && !document.hidden && !capturePaused) {
       await refreshFaces();
       lastObservation = await observe();
       await execute(machine.observe(lastObservation, Date.now()));
@@ -250,6 +257,7 @@ async function start() {
     window.setInterval(updateClock, 30_000);
     setStatus('Chargement…');
     config = await api.config();
+    document.documentElement.style.setProperty('--qr-size', `${config.qrSizeRem}rem`);
     machine = new SessionMachine(config);
     cameraStream = await startCamera(el.camera, config.cameraWidth);
     el['asset-loading'].hidden = false;
@@ -261,6 +269,33 @@ async function start() {
     await refreshFaces(0);
     await restoreSession();
     render();
+    kiosk = createKiosk({
+      getConfig: () => config,
+      isConnected: () => machine.state === State.CONNECTED,
+      connectedProfileId: () => machine.profileId,
+      detect: () => recognizer.detect(el.camera),
+      getVideo: () => el.camera,
+      getFaces: () => faces,
+      refreshFaces,
+      setPaused: (paused) => {
+        capturePaused = paused;
+        if (!paused) {
+          wake();
+        }
+      },
+      elements: {
+        panel: document.getElementById('qr-panel'),
+        link: document.getElementById('qr-link'),
+        image: document.getElementById('qr-image'),
+        overlay: document.getElementById('capture-overlay'),
+        title: document.getElementById('capture-title'),
+        count: document.getElementById('capture-count'),
+        hint: document.getElementById('capture-hint'),
+        progress: document.getElementById('capture-progress'),
+        message: document.getElementById('capture-message'),
+      },
+    });
+    kiosk.start();
   } catch (error) {
     stopCamera(cameraStream);
     cameraStream = null;

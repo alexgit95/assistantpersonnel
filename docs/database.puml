@@ -44,7 +44,9 @@ entity "app_session" as app_session {
   --
   * profile_id : bigint  ' supprimee a la suppression du profil (evenement)
   * created_at_ms : bigint
-  * expires_at_ms : bigint  ' session glissante
+  * expires_at_ms : bigint  ' session glissante (Pi) ou duree fixe (smartphone)
+  * scope : varchar(16)  ' FULL (defaut) ou WEIGHT (saisie du poids seulement)
+  * source : varchar(16)  ' FACE (Pi, defaut) ou HANDOFF (smartphone : transfert ou enrolement)
 }
 
 entity "announcement" as announcement {

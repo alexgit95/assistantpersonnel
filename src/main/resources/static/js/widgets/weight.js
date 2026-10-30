@@ -1,16 +1,10 @@
-import { api, ApiError } from '../api.js';
-import { typeText } from '../typewriter.js';
+import { api } from '../api.js';
+import { buildQr, loadQrLibrary, qrSvg } from '../qr-code.js';
+import { createQrTicket } from '../qr-ticket.js';
 import { startRetypeLoop } from '../retype.js';
 
 const CHART_PAGE_SIZE = 6;
-const RECENT_MEASURE_COUNT = 3;
-
-function localDateValue() {
-  const date = new Date();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
-}
+const DEFAULT_QR_POLL_MS = 3000;
 
 export function formatWeight(kgTenths) {
   return `${(kgTenths / 10).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg`;
@@ -80,97 +74,76 @@ function drawChart(svg, labelLayer, entries, replay = false) {
   }
 }
 
+/** QR poids : un jeton WEIGHT a usage unique, renouvele des qu'il est scanne ou presque expire. */
+function startWeightQr(root, clientConfig) {
+  const panel = root.querySelector('[data-weight-qr]');
+  const link = root.querySelector('[data-weight-qr-link]');
+  const image = root.querySelector('[data-weight-qr-image]');
+  const devMode = Boolean(clientConfig.qrDevMode);
+
+  const ticket = createQrTicket({
+    issue: () => api.issueHandoff('WEIGHT'),
+    poll: (ids) => api.kioskState(ids),
+    show: async (url) => {
+      const library = await loadQrLibrary();
+      image.innerHTML = qrSvg(buildQr(library, url), { label: 'QR code pour saisir son poids sur un téléphone' });
+      if (devMode) {
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.title = `Simuler le scan : ${url}`;
+      }
+      panel.hidden = false;
+    },
+    clear: () => {
+      image.replaceChildren();
+      link.removeAttribute('href');
+      link.removeAttribute('title');
+      panel.hidden = true;
+    },
+  });
+
+  const run = async () => {
+    if (!root.isConnected) {
+      return;
+    }
+    try {
+      if (!document.hidden) {
+        await ticket.tick();
+      }
+    } catch (error) {
+      console.warn('QR poids indisponible', error);
+    }
+    setTimeout(run, clientConfig.kioskPollIdleMs ?? DEFAULT_QR_POLL_MS);
+  };
+  run();
+}
+
 export async function initialize(container, _configJson, typingOptions = {}) {
   const root = container.querySelector('[data-weight-widget]');
   if (!root) return;
 
-  const card = root.querySelector('[data-weight-card]');
-  const chartFace = root.querySelector('.weight-chart-face');
-  const measuresFace = root.querySelector('.weight-measures-face');
-  const openButton = root.querySelector('[data-weight-open]');
-  const backButton = root.querySelector('[data-weight-back]');
-  const form = root.querySelector('[data-weight-form]');
-  const dateInput = form.elements.entryDate;
-  const valueInput = form.elements.value;
-  const status = root.querySelector('[data-weight-status]');
-  const history = root.querySelector('[data-weight-history]');
   const chart = root.querySelector('[data-weight-chart]');
   const chartLabels = root.querySelector('[data-weight-labels]');
-
-  dateInput.value = localDateValue();
-
-  const showError = (error) => {
-    typeText(status, error instanceof ApiError ? error.message : 'Une erreur est survenue. Réessayez.', typingOptions);
-  };
-
-  const setFlipped = (flipped) => {
-    card.classList.toggle('is-flipped', flipped);
-    openButton.setAttribute('aria-expanded', String(flipped));
-    backButton.setAttribute('aria-expanded', String(!flipped));
-    chartFace.inert = flipped;
-    chartFace.setAttribute('aria-hidden', String(flipped));
-    measuresFace.inert = !flipped;
-    measuresFace.setAttribute('aria-hidden', String(!flipped));
-    if (flipped) {
-      valueInput.focus();
-    } else {
-      openButton.focus();
-    }
-  };
+  const empty = root.querySelector('[data-weight-empty]');
 
   const loadData = async ({ periodic = false } = {}) => {
-    const writing = periodic ? { ...typingOptions, restart: true } : typingOptions;
     try {
-      const [chartPage, recentPage] = await Promise.all([
-        api.weightEntries(0, CHART_PAGE_SIZE),
-        api.weightEntries(0, RECENT_MEASURE_COUNT),
-      ]);
+      const chartPage = await api.weightEntries(0, CHART_PAGE_SIZE);
       drawChart(chart, chartLabels, chartPage.entries, periodic);
-      history.replaceChildren();
-      for (const entry of recentPage.entries) {
-        const item = document.createElement('li');
-        const measure = document.createElement('button');
-        measure.type = 'button';
-        measure.className = 'weight-measure';
-        measure.setAttribute('aria-label', 'Revenir au graphique');
-        typeText(measure, `${formatDate(entry.entryDate)} · ${formatWeight(entry.kgTenths)}`, writing);
-        measure.addEventListener('click', () => setFlipped(false));
-        item.append(measure);
-        history.append(item);
-      }
-      if (recentPage.entries.length === 0) {
-        const item = document.createElement('li');
-        typeText(item, 'Aucune mesure enregistrée.', writing);
-        history.append(item);
-      }
+      empty.hidden = chartPage.entries.length > 0;
     } catch (error) {
-      if (!periodic) showError(error);
+      if (!periodic) console.warn('Poids indisponible', error);
     }
   };
 
-  openButton.addEventListener('click', async () => {
-    await loadData();
-    setFlipped(true);
-  });
-  backButton.addEventListener('click', () => setFlipped(false));
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    try {
-      await api.createWeight(dateInput.value, valueInput.value);
-      valueInput.value = '';
-      dateInput.value = localDateValue();
-      typeText(status, 'Mesure ajoutée.', typingOptions);
-      await loadData();
-    } catch (error) {
-      showError(error);
-    }
-  });
-
   await loadData();
+  const clientConfig = await api.config().catch(() => ({}));
+  startWeightQr(root, clientConfig);
   if (typingOptions.enabled !== false) {
     startRetypeLoop({
       run: () => loadData({ periodic: true }),
-      isPaused: () => card.classList.contains('is-flipped') || form.contains(document.activeElement),
+      isPaused: () => false,
       isActive: () => root.isConnected,
     });
   }

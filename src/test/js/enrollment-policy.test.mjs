@@ -42,11 +42,14 @@ test('enrollment blocks an ambiguous match', () => {
     'ambiguous');
 });
 
-test('avatar selection and save require configured capture count and valid selection', () => {
+test('avatar selection and save require exactly the configured capture count and a valid selection', () => {
   assert.equal(canChooseAvatar(4, 5), false);
   assert.equal(canChooseAvatar(5, 5), true);
-  assert.equal(canSaveEnrollment(4, 5, 8, 0), false);
-  assert.equal(canSaveEnrollment(5, 5, 8, 4), true);
-  assert.equal(canSaveEnrollment(9, 5, 8, 0), false);
-  assert.equal(canSaveEnrollment(5, 5, 8, 5), false);
+  assert.equal(canChooseAvatar(6, 5), false);
+  assert.equal(canSaveEnrollment(4, 5, 0), false);
+  assert.equal(canSaveEnrollment(5, 5, 4), true);
+  assert.equal(canSaveEnrollment(6, 5, 0), false);
+  assert.equal(canSaveEnrollment(5, 5, 5), false);
+  assert.equal(canSaveEnrollment(5, 5, -1), false);
+  assert.equal(canSaveEnrollment(5, 5, 1.5), false);
 });

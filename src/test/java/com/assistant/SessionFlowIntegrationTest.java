@@ -90,6 +90,7 @@ class SessionFlowIntegrationTest {
                 registry.add("assistant.admin.max-failed-attempts", () -> "5");
                 registry.add("assistant.admin.lockout-minutes", () -> "1");
                 registry.add("assistant.backup.max-upload-mb", () -> "1");
+                registry.add("assistant.enrollment.photos", () -> "5");
     }
 
     @Autowired
@@ -226,8 +227,8 @@ class SessionFlowIntegrationTest {
                 .andExpect(content().string(containsString("lang=\"fr\"")))
                 .andExpect(content().string(containsString("id=\"camera\"")))
                 .andExpect(content().string(containsString("id=\"logout\"")))
-                .andExpect(content().string(containsString("id=\"create-profile\"")))
-                .andExpect(content().string(containsString("id=\"recapture-profile\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("id=\"create-profile\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("id=\"recapture-profile\""))))
                 .andExpect(content().string(containsString("id=\"asset-progress\"")))
                 .andExpect(content().string(containsString("id=\"asset-loading-label\"")))
                 .andExpect(content().string(containsString("id=\"clock\"")))
@@ -235,13 +236,17 @@ class SessionFlowIntegrationTest {
                 .andExpect(content().string(containsString("id=\"menu-configuration\"")))
                 .andExpect(content().string(containsString("profile-avatar-button avatar-hex")))
                 .andExpect(content().string(containsString("/admin\"")))
-                .andExpect(content().string(containsString("/enroll")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("/enroll"))))
                 .andExpect(content().string(containsString("/js/home.js")));
-        for (String module : List.of("home", "api", "admin", "camera", "enrollment", "enrollment-policy",
+        for (String module : List.of("home", "api", "admin", "camera", "enrollment-policy",
                                 "face-assets", "matcher", "recognizer", "session-machine", "typewriter",
-                                "profile-menu", "configuration", "configuration-state")) {
+                                "profile-menu", "configuration", "configuration-state", "kiosk-key", "kiosk",
+                                "qr-code", "remote-capture", "avatar")) {
             mvc.perform(get("/js/" + module + ".js")).andExpect(status().isOk());
         }
+        mvc.perform(get("/vendor/qrcode/qrcode.js")).andExpect(status().isOk());
+        mvc.perform(get("/")).andExpect(content().string(containsString("id=\"qr-panel\"")))
+                .andExpect(content().string(containsString("id=\"capture-overlay\"")));
                 mvc.perform(get("/js/widgets/weight.js")).andExpect(status().isOk());
                 mvc.perform(get("/js/widgets/weather.js")).andExpect(status().isOk());
                 mvc.perform(get("/js/widgets/announcements.js")).andExpect(status().isOk());
@@ -253,18 +258,12 @@ class SessionFlowIntegrationTest {
                 .andExpect(content().string(containsString(".profile-menu-panel [hidden]")))
                 .andExpect(content().string(containsString(".identity {")))
                 .andExpect(content().string(containsString(".dashboard-grid {")))
-                .andExpect(content().string(containsString(".webcam-frame {")));
-        mvc.perform(get("/css/admin.css")).andExpect(status().isOk());
+                .andExpect(content().string(containsString(".webcam-frame {")))
+                .andExpect(content().string(containsString(".configuration-list-controls {")))
+                .andExpect(content().string(containsString("@media (max-width: 720px)")));
+        mvc.perform(get("/css/admin.css")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("@media (max-width: 720px)")));
     }
-
-        @Test
-        void certificateHelpIsPublicAndRootCertificateIsMissingInLocalMode() throws Exception {
-                mvc.perform(get("/certificat"))
-                                .andExpect(status().isOk())
-                                .andExpect(content().string(containsString("Télécharger le certificat racine")))
-                                .andExpect(content().string(containsString("iPhone et iPad")));
-                mvc.perform(get("/root.crt")).andExpect(status().isNotFound());
-        }
 
         @Test
         void configurationPageIsProtectedByTheFaceSession() throws Exception {
@@ -280,18 +279,35 @@ class SessionFlowIntegrationTest {
         }
 
         @Test
-        void enrollmentPageIsServedWithGuidedCaptureAndAvatarSelection() throws Exception {
-                mvc.perform(get("/enroll"))
-                        .andExpect(status().isOk())
-                        .andExpect(content().string(containsString("id=\"enroll-camera\"")))
-                        .andExpect(content().string(containsString("id=\"capture-button\"")))
-                        .andExpect(content().string(containsString("id=\"avatar-gallery\"")))
-                        .andExpect(content().string(containsString("name=\"embedding-mode\"")))
-                        .andExpect(content().string(containsString("lang=\"fr\"")));
-                mvc.perform(get("/js/enrollment.js")).andExpect(status().isOk());
+        void theOldEnrollmentPageAndItsAssetsAreGone() throws Exception {
+                mvc.perform(get("/enroll")).andExpect(status().isNotFound());
+                mvc.perform(get("/js/enrollment.js")).andExpect(status().isNotFound());
+                mvc.perform(get("/css/enrollment.css")).andExpect(status().isNotFound());
                 mvc.perform(get("/js/enrollment-policy.js")).andExpect(status().isOk());
-                mvc.perform(get("/css/enrollment.css")).andExpect(status().isOk());
             }
+
+    @Test
+    void mobilePagesAreOpenAndServedWithTheirScripts() throws Exception {
+        mvc.perform(get("/mobile")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(content().string(containsString("id=\"mobile-menu\"")))
+                .andExpect(content().string(containsString("/js/mobile.js")));
+        mvc.perform(get("/mobile/enroll")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"profile-name\"")))
+                .andExpect(content().string(containsString("id=\"name-field\"")))
+                .andExpect(content().string(containsString("name=\"embedding-mode\"")))
+                .andExpect(content().string(containsString("id=\"avatar-gallery\"")))
+                .andExpect(content().string(containsString("/js/mobile-enroll.js")));
+        mvc.perform(get("/mobile/weight")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("inputmode=\"decimal\"")))
+                .andExpect(content().string(containsString("/js/mobile-weight.js")));
+        for (String script : List.of("mobile", "mobile-menu", "mobile-enroll", "mobile-enroll-flow", "mobile-weight",
+                "weight-input")) {
+            mvc.perform(get("/js/" + script + ".js")).andExpect(status().isOk());
+        }
+        mvc.perform(get("/css/mobile.css")).andExpect(status().isOk());
+    }
 
     @Test
     void swaggerDocumentationIsExposed() throws Exception {
@@ -309,7 +325,13 @@ class SessionFlowIntegrationTest {
                 {"/api/weight", "get"}, {"/api/weight", "post"},
                 {"/api/weight/{id}", "put"}, {"/api/weight/{id}", "delete"},
                 {"/api/weather/cities", "get"}, {"/api/weather/location", "put"},
-                {"/api/weather", "get"}, {"/root.crt", "get"}};
+                {"/api/weather", "get"},
+                {"/api/session/handoff", "post"}, {"/api/kiosk/state", "get"},
+                {"/api/enrollment-sessions", "post"}, {"/api/enrollment-sessions/recapture", "post"},
+                {"/api/enrollment-sessions/current", "get"}, {"/api/enrollment-sessions/{id}/state", "get"},
+                {"/api/enrollment-sessions/{id}/start", "post"}, {"/api/enrollment-sessions/{id}/captures", "post"},
+                {"/api/enrollment-sessions/{id}/avatars", "get"}, {"/api/enrollment-sessions/{id}/restart", "post"},
+                {"/api/enrollment-sessions/{id}/confirm", "post"}, {"/api/enrollment-sessions/{id}", "delete"}};
 
         for (String[] operation : operations) {
             var documented = paths.path(operation[0]).path(operation[1]);
@@ -910,8 +932,11 @@ class SessionFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("data-weight-chart")))
                 .andExpect(content().string(containsString("data-weight-labels")))
-                .andExpect(content().string(containsString("data-weight-open")))
-                .andExpect(content().string(containsString("data-weight-form")));
+                .andExpect(content().string(containsString("data-weight-qr")))
+                .andExpect(content().string(containsString("Scannez pour saisir votre premier poids")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("data-weight-open"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("data-weight-form"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("weight-card"))));
     }
 
     @Test

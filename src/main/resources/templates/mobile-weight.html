@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Assistant | Poids</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/mobile.css}">
+</head>
+<body>
+<main class="mobile-page">
+    <a class="mobile-back" th:href="@{/mobile}">Menu</a>
+    <h1>Poids</h1>
+    <p id="weight-owner" role="status"></p>
+
+    <form id="weight-form" class="mobile-form" novalidate hidden>
+        <label for="weight-date">Date</label>
+        <input id="weight-date" name="entryDate" type="date" required>
+        <label for="weight-value">Poids (kg)</label>
+        <input id="weight-value" name="value" type="text" inputmode="decimal" maxlength="16"
+               autocomplete="off" placeholder="72,5" required>
+        <div class="mobile-actions">
+            <button id="weight-submit" type="submit" class="mobile-primary">Ajouter</button>
+            <button id="weight-cancel-edit" type="button" hidden>Annuler la modification</button>
+        </div>
+    </form>
+    <p id="weight-message" role="status" aria-live="polite"></p>
+
+    <ul id="weight-list" class="mobile-list" aria-label="Mesures"></ul>
+    <nav id="weight-pager" class="mobile-actions" aria-label="Pages" hidden>
+        <button id="weight-prev" type="button">Précédent</button>
+        <span id="weight-page" aria-live="polite"></span>
+        <button id="weight-next" type="button">Suivant</button>
+    </nav>
+</main>
+<script type="module" th:src="@{/js/mobile-weight.js}"></script>
+</body>
+</html>
