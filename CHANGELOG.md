@@ -2,6 +2,25 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [1.1.0] - 2026-11-02
+
+### Added
+- Modes de déploiement `dev` (défaut), `onprem` et `remote`, choisis par le profil Spring (`spring.profiles.active` dans un fichier de propriétés, `SPRING_PROFILES_ACTIVE` ou `--spring.profiles.active`). Chaque mode assemble des profils d'axe par groupes de profils : `dev` = `sqlite`, `assets-cdn`, `http-only`, `qr-dev` ; `onprem` = `sqlite`, `assets-cdn`, `http-only` ; `remote` = `postgres`, `https-dual`. Fonctionnel : le poste du développeur et l'ordinateur du miroir tournent sans Docker en SQLite ; le serveur distant (intégration, production B) tourne en Docker avec PostgreSQL.
+- Mode `remote` : HTTPS (8443, kiosque et webcam) et HTTP (8080, smartphones) simultanés. `HttpConnectorConfiguration` ajoute un connecteur Tomcat HTTP au port principal HTTPS (SSL bundle `kiosk`) ; refus de démarrer avec un message explicite si le keystore est illisible. Nouvelles propriétés `assistant.http.*` (`enabled`, `port`, `public-port`) et `assistant.https.*` (`enabled`, `port`, `cert-dir`, `keystore-path`, `keystore-type`, `keystore-password`, `hostnames`, `validity-days`) avec validations et variables `ASSISTANT_HTTP_*` / `ASSISTANT_HTTPS_*`.
+- Certificat HTTPS auto-signé généré au premier démarrage du conteneur par `scripts/docker-entrypoint.sh` (`keytool`, RSA 2048, SAN `localhost`, `127.0.0.1` et `ASSISTANT_HTTPS_HOSTNAMES`, validité `ASSISTANT_HTTPS_VALIDITY_DAYS`), stocké dans le volume `certs` avec un mot de passe aléatoire en droits restreints, jamais régénéré s'il existe ; keystore PKCS12 fourni possible (`ASSISTANT_HTTPS_KEYSTORE_PATH`). Chaque déploiement a sa propre clé privée.
+- URL des QR dérivée en mode `remote` : `http://<hôte du kiosque>:<port HTTP publié>` (hôte validé, uniquement sur les appels réservés au kiosque), après `ASSISTANT_PUBLIC_BASE_URL` et la bascule `localhost` ⇄ `127.0.0.1` du mode `dev`. `ASSISTANT_HTTP_PUBLIC_PORT` (reporté depuis `APP_PORT` dans le compose) fixe le port des QR.
+- README : section « Modes de déploiement » (tableau des trois modes, choix du mode par fichier, variable ou argument, propriétés à valoriser par mode, certificat, acceptation dans le navigateur, mise en garde sur le HTTP), section de migration vers la 1.1.
+- Tests : profils par mode (`DeploymentModeProfilesTest`), validation des propriétés HTTP/HTTPS, connecteur additionnel (`HttpConnectorConfigurationTest`), HTTP et HTTPS simultanés avec un keystore de test (`DualConnectorIntegrationTest`), dérivation de l'URL des QR, absence de HSTS.
+
+### Changed
+- **BREAKING** : le profil `prod` devient un alias de `remote` et ouvre donc aussi le port HTTPS 8443. Les stacks existantes doivent publier ce port, monter le volume `certs` (le nouveau `docker-compose.yml` le fait) et renseigner `ASSISTANT_HTTPS_HOSTNAMES` ; le navigateur du kiosque passe à `https://<hôte>:8443/?kiosk=<clé>`. `local` reste un alias de `dev`. L'image et le compose démarrent par défaut en `remote`.
+- `application-local.properties` et `application-prod.properties` sont remplacés par des fichiers d'axe (`application-sqlite.properties`, `application-postgres.properties`, `application-assets-cdn.properties`, `application-http-only.properties`, `application-https-dual.properties`, `application-qr-dev.properties`). `spring.profiles.default` passe de `local` à `dev`.
+- La clé de kiosque est obligatoire en `onprem`, `remote` et `prod` (le démarrage échoue si elle est vide) et facultative en `dev` (`KioskStartupCheck`).
+- HSTS désactivé et cookie de session non `Secure` par défaut : un nom de domaine avec HSTS ferait passer les smartphones de `http://hôte:8080` en HTTPS. Conséquence assumée : sur un serveur distant, le mot de passe d'administration, les cookies et les jetons de QR saisis depuis un smartphone circulent en clair (documenté dans le README).
+- Image Docker : le `Dockerfile` démarre par `scripts/docker-entrypoint.sh`, expose 8080 et 8443, déclare le volume `/certs` et vérifie la présence de `keytool` au build ; la GitHub Action est inchangée.
+- `docker-compose.yml` : ports `${APP_PORT:-8080}:8080` et `${APP_HTTPS_PORT:-8443}:8443`, volume `certs`, variables `ASSISTANT_HTTPS_*`, `ASSISTANT_HTTP_PUBLIC_PORT`.
+- `.github/copilot-instructions.md` et `docs/parcours-qrcode-smartphone.md` mis à jour pour les nouveaux profils. Version du `pom.xml` : 1.1.0.
+
 ## [1.0.0] - 2026-10-30
 
 ### Added

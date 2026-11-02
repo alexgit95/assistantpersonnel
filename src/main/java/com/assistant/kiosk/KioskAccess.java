@@ -5,7 +5,7 @@ import com.assistant.common.TokenSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
-/** Verifie la cle de kiosque d'une requete ; cle configuree vide = controle desactive (profil local). */
+/** Verifie la cle de kiosque d'une requete ; cle configuree vide = controle desactive (mode dev). */
 @Component
 public class KioskAccess {
 

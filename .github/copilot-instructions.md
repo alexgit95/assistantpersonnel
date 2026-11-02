@@ -9,14 +9,16 @@
 - **Conteneurisation :** Docker
 
 - **Bases de données :**
-  - **Production / Dev distant :** PostgreSQL
-  - **Local (`local` profile) :** SQLite (pour un développement léger sans dépendance docker externe obligatoire)
+  - **Production / Dev distant (mode `remote`) :** PostgreSQL
+  - **Développement (mode `dev`) et mode `onprem` :** SQLite (pour un développement léger ou une installation sans Docker)
+
+- **Modes de déploiement (profils Spring) :** `dev` (défaut : SQLite, HTTP seul, CDN), `onprem` (production A sur l'ordinateur du miroir : SQLite, HTTP seul, `ASSISTANT_PUBLIC_BASE_URL` obligatoire) et `remote` (intégration et production B : PostgreSQL, HTTPS 8443 pour le kiosque et HTTP 8080 pour les smartphones, Docker uniquement). `local` et `prod` restent des alias de `dev` et `remote`.
 
 ##  Workflow CI/CD et Spécificités du Déploiement Cible (Raspberry Pi 4)
 
 * **Cycle de Vie et Déploiement :** 
 
-  * Le développement et les tests initiaux se font en local avec le profil local branché sur **SQLite**.
+  * Le développement et les tests initiaux se font en local avec le mode `dev` branché sur **SQLite**.
   * Le déploiement s'effectue exclusivement de manière automatisée après chaque commit/push sur **GitHub**.
   * Une **GitHub Action** est déjà configurée et active dans le projet (consulte le dossier .github/workflows/ pour en comprendre les étapes de build et de validation). Ne propose aucune modification des pipelines CI/CD sans demande explicite.
 * **Architecture de Production (Raspberry Pi 4) :** 
@@ -40,9 +42,10 @@
 - Veille à ce que chaque endpoint expose une description claire des paramètres d'entrée, des codes de statut HTTP de retour (200, 201, 400, 404, 500) et des formats de réponses DTO.
 
 ### 3. Gestion Multi-Base & Modélisation (PostgreSQL & SQLite)
-- Structure les fichiers de configuration de manière à isoler les environnements via les profils Spring :
-  - `application-local.properties` (ou `.yml`) : Configurer le dialecte, le pilote JDBC et la stratégie JPA pour **SQLite**.
-  - `application-prod.properties` (ou `.yml`) : Configurer l'accès à la base **PostgreSQL**.
+- Structure les fichiers de configuration de manière à isoler les environnements via les profils Spring (un fichier par axe, assemblés par les groupes `dev`, `onprem` et `remote` de `application.properties`) :
+  - `application-sqlite.properties` (ou `.yml`) : Configurer le dialecte, le pilote JDBC et la stratégie JPA pour **SQLite**.
+  - `application-postgres.properties` (ou `.yml`) : Configurer l'accès à la base **PostgreSQL**.
+  - `application-http-only.properties`, `application-https-dual.properties`, `application-assets-cdn.properties`, `application-qr-dev.properties` : transport HTTP/HTTPS, source des assets et aides de développement.
 - Lorsque tu génères du code d'entité JPA ou des scripts de migration, écris du SQL ou des annotations standard compatibles avec les deux bases de données.
 - **📊 RÈGLE DE MODÉLISATION (PlantUML) :** À chaque modification, ajout ou suppression impactant la structure de la base de données (entités JPA, tables, colonnes, relations, contraintes), tu dois obligatoirement générer ou mettre à jour le fichier de modélisation de la base de données au format **PlantUML** (ex: `docs/database.puml`).
 

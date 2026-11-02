@@ -36,11 +36,16 @@ FROM eclipse-temurin:25-jre
 ARG GIT_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$GIT_COMMIT
 ENV GIT_COMMIT=$GIT_COMMIT \
-    SPRING_PROFILES_ACTIVE=prod \
+    SPRING_PROFILES_ACTIVE=remote \
+    ASSISTANT_HTTPS_CERT_DIR=/certs \
     JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -Xmx384m -Xss512k"
-RUN useradd --system --uid 10001 --no-create-home assistant
+RUN useradd --system --uid 10001 --no-create-home assistant \
+    && keytool -help >/dev/null 2>&1 \
+    && mkdir /certs && chown assistant /certs
 WORKDIR /app
 COPY --from=build /build/target/app.jar /app/app.jar
+COPY --chmod=755 scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+VOLUME /certs
 USER assistant
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+EXPOSE 8080 8443
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -260,7 +260,7 @@ class TransitServiceTest {
         return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(), base.weather(),
                 base.ui(), base.backup(), base.faceAssets(),
                 new AssistantProperties.Prim(750, 10, "22:00", "05:00"),
-                base.publicBaseUrl(), base.kiosk(), base.handoff(), base.qr());
+                base.publicBaseUrl(), base.kiosk(), base.handoff(), base.qr(), base.http(), base.https());
     }
 
     private static final class MutableClock extends Clock {

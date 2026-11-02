@@ -6,7 +6,7 @@ services:
     image: alexdock95/assistantpersonnel:latest
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-remote}
       ASSISTANT_FACE_ASSETS_MODE: ${ASSISTANT_FACE_ASSETS_MODE:-local}
       ASSISTANT_FACE_API_URL: ${ASSISTANT_FACE_API_URL:-/vendor/face-api/face-api.js}
       ASSISTANT_FACE_MODELS_URL: ${ASSISTANT_FACE_MODELS_URL:-/vendor/face-api/model}
@@ -38,6 +38,12 @@ services:
       ASSISTANT_ENROLLMENT_REMOTE_SESSION_TTL_MINUTES: ${ASSISTANT_ENROLLMENT_REMOTE_SESSION_TTL_MINUTES:-10}
       ASSISTANT_ENROLLMENT_REMOTE_MAX_CONSECUTIVE_FAILURES: ${ASSISTANT_ENROLLMENT_REMOTE_MAX_CONSECUTIVE_FAILURES:-3}
       ASSISTANT_PUBLIC_BASE_URL: ${ASSISTANT_PUBLIC_BASE_URL:-}
+      ASSISTANT_HTTP_PUBLIC_PORT: ${APP_PORT:-8080}
+      ASSISTANT_HTTPS_HOSTNAMES: ${ASSISTANT_HTTPS_HOSTNAMES:-}
+      ASSISTANT_HTTPS_VALIDITY_DAYS: ${ASSISTANT_HTTPS_VALIDITY_DAYS:-825}
+      ASSISTANT_HTTPS_KEYSTORE_PASSWORD: ${ASSISTANT_HTTPS_KEYSTORE_PASSWORD:-}
+      # Certificat fourni (sinon genere dans le volume certs) : decommenter et monter le fichier sous /certs.
+      # ASSISTANT_HTTPS_KEYSTORE_PATH: /certs/mon-certificat.p12
       ASSISTANT_KIOSK_KEY: ${ASSISTANT_KIOSK_KEY:?ASSISTANT_KIOSK_KEY obligatoire}
       ASSISTANT_KIOSK_POLL_IDLE_MS: ${ASSISTANT_KIOSK_POLL_IDLE_MS:-3000}
       ASSISTANT_KIOSK_POLL_ACTIVE_MS: ${ASSISTANT_KIOSK_POLL_ACTIVE_MS:-1000}
@@ -64,6 +70,9 @@ services:
         condition: service_healthy
     ports:
       - "${APP_PORT:-8080}:8080"
+      - "${APP_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - certs:/certs
     mem_limit: 512m
 
   db:
@@ -84,3 +93,4 @@ services:
 
 volumes:
   db_data:
+  certs:

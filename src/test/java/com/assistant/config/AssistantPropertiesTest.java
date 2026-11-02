@@ -16,7 +16,7 @@ class AssistantPropertiesTest {
         var base = Fixtures.properties();
         return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
                 base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), url, base.kiosk(),
-                base.handoff(), base.qr());
+                base.handoff(), base.qr(), base.http(), base.https());
     }
 
     @Test
@@ -101,5 +101,57 @@ class AssistantPropertiesTest {
         assertThat(validator.validate(new AssistantProperties.Handoff(5, 30, 10))).isNotEmpty();
         assertThat(validator.validate(new AssistantProperties.Handoff(120, 0, 10))).isNotEmpty();
         assertThat(validator.validate(new AssistantProperties.Handoff(120, 30, 2000))).isNotEmpty();
+    }
+
+    private static AssistantProperties.Https https(boolean enabled, String path, String password, String hostnames) {
+        return new AssistantProperties.Https(enabled, 8443, "/certs", path, "PKCS12", password, hostnames, 825);
+    }
+
+    @Test
+    void httpPortsAreBounded() {
+        assertThat(validator.validate(new AssistantProperties.Http(true, 8080, 8080))).isEmpty();
+        assertThat(validator.validate(new AssistantProperties.Http(true, 0, 8080))).isNotEmpty();
+        assertThat(validator.validate(new AssistantProperties.Http(true, 8080, 70_000))).isNotEmpty();
+    }
+
+    @Test
+    void httpsDisabledNeedsNoKeystore() {
+        assertThat(validator.validate(https(false, "", "", ""))).isEmpty();
+    }
+
+    @Test
+    void httpsEnabledNeedsKeystoreAndPassword() {
+        assertThat(validator.validate(https(true, "/certs/assistant.p12", "secret", ""))).isEmpty();
+        assertThat(validator.validate(https(true, "", "secret", ""))).isNotEmpty();
+        assertThat(validator.validate(https(true, "/certs/assistant.p12", "", ""))).isNotEmpty();
+    }
+
+    @Test
+    void httpsHostnamesAcceptNamesAndAddressesOnly() {
+        assertThat(validator.validate(https(false, "", "", "serveur.example,192.168.1.50,[::1]"))).isEmpty();
+        assertThat(validator.validate(https(false, "", "", "bad host"))).isNotEmpty();
+        assertThat(validator.validate(https(false, "", "", "a;rm -rf /"))).isNotEmpty();
+        assertThat(validator.validate(https(false, "", "", "a,,b"))).isNotEmpty();
+    }
+
+    @Test
+    void httpsValidityMustBePositive() {
+        var https = new AssistantProperties.Https(false, 8443, "/certs", "", "PKCS12", "", "", 0);
+        assertThat(validator.validate(https)).isNotEmpty();
+    }
+
+    @Test
+    void httpAndHttpsPortsMustDifferWhenBothEnabled() {
+        var base = Fixtures.properties();
+        var same = new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
+                base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), base.publicBaseUrl(),
+                base.kiosk(), base.handoff(), base.qr(), new AssistantProperties.Http(true, 8443, 8443),
+                https(true, "/certs/assistant.p12", "secret", ""));
+        assertThat(validator.validate(same)).isNotEmpty();
+        var different = new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
+                base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), base.publicBaseUrl(),
+                base.kiosk(), base.handoff(), base.qr(), new AssistantProperties.Http(true, 8080, 8080),
+                https(true, "/certs/assistant.p12", "secret", ""));
+        assertThat(validator.validate(different)).isEmpty();
     }
 }

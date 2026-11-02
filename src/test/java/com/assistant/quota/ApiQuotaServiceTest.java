@@ -23,7 +23,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 /** Budget persiste sur SQLite reel : reservation atomique, redemarrage, changement de jour, purge. */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("dev")
 class ApiQuotaServiceTest {
 
     static final String DB_FILE = "target/it-quota-" + UUID.randomUUID() + ".db";

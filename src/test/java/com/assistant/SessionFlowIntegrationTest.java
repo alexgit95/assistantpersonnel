@@ -48,7 +48,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 /** Parcours complet sur SQLite reel : schema Hibernate, creation de profil, session glissante, isolation. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("local")
+@ActiveProfiles("dev")
 @Import(SessionFlowIntegrationTest.TestApps.class)
 class SessionFlowIntegrationTest {
 
@@ -109,6 +109,12 @@ class SessionFlowIntegrationTest {
         ProfileAppService profileAppService;
         @Autowired
         ApiQuotaService apiQuotaService;
+
+    @Test
+    void secureRequestsNeverCarryHstsSoMobileStaysOnHttp() throws Exception {
+        mvc.perform(get("/mobile").secure(true))
+                .andExpect(header().doesNotExist("Strict-Transport-Security"));
+    }
 
     private static String embeddings(int count, float base) {
         return IntStream.range(0, count)

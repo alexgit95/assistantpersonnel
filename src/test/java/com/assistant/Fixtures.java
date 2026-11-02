@@ -30,28 +30,39 @@ public final class Fixtures {
                     "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/"),
                 new AssistantProperties.Prim(750, 10, "22:00", "05:00"),
                 "", new AssistantProperties.Kiosk("", 3000, 1000), new AssistantProperties.Handoff(120, 30, 10),
-                new AssistantProperties.Qr(false, 9.0));
+                new AssistantProperties.Qr(false, 9.0),
+                new AssistantProperties.Http(true, 8080, 8080),
+                new AssistantProperties.Https(false, 8443, "/certs", "/certs/assistant.p12", "PKCS12", "", "", 825));
     }
 
     public static AssistantProperties withQr(String publicBaseUrl, boolean devMode) {
         var base = properties();
         return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
                 base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), publicBaseUrl,
-                base.kiosk(), base.handoff(), new AssistantProperties.Qr(devMode, 9.0));
+                base.kiosk(), base.handoff(), new AssistantProperties.Qr(devMode, 9.0), base.http(), base.https());
+    }
+
+    /** Mode remote : HTTPS (kiosque) et HTTP (smartphones) actifs, avec le port HTTP publie. */
+    public static AssistantProperties withDualProtocol(String publicBaseUrl, int httpPublicPort) {
+        var base = properties();
+        return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
+                base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), publicBaseUrl,
+                base.kiosk(), base.handoff(), base.qr(), new AssistantProperties.Http(true, 8080, httpPublicPort),
+                new AssistantProperties.Https(true, 8443, "/certs", "/certs/assistant.p12", "PKCS12", "secret", "", 825));
     }
 
     public static AssistantProperties withQrAndKioskKey(String publicBaseUrl, String kioskKey) {
         var base = withKioskKey(kioskKey);
         return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
                 base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), publicBaseUrl,
-                base.kiosk(), base.handoff(), base.qr());
+                base.kiosk(), base.handoff(), base.qr(), base.http(), base.https());
     }
 
     public static AssistantProperties withKioskKey(String key) {
         var base = properties();
         return new AssistantProperties(base.session(), base.scan(), base.recognition(), base.enrollment(),
                 base.weather(), base.ui(), base.backup(), base.faceAssets(), base.prim(), base.publicBaseUrl(),
-                new AssistantProperties.Kiosk(key, 3000, 1000), base.handoff(), base.qr());
+                new AssistantProperties.Kiosk(key, 3000, 1000), base.handoff(), base.qr(), base.http(), base.https());
     }
 
     /** Vecteur de 128 valeurs ; deux bases differentes de 1.0 donnent une distance d'environ 11. */

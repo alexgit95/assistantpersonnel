@@ -38,7 +38,9 @@ public class AdminSecurityConfig {
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"));
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+                // HSTS forcerait les smartphones en HTTPS (port 8080 conserve) alors qu'ils doivent rester en HTTP.
+                .headers(headers -> headers.httpStrictTransportSecurity(hsts -> hsts.disable()));
         return http.build();
     }
 }

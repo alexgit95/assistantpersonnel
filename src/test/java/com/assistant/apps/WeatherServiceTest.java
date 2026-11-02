@@ -33,7 +33,7 @@ class WeatherServiceTest {
         clock = new MutableClock(Instant.parse("2026-10-27T10:00:00Z"));
         service = new WeatherService(gateway, profileApps, new ObjectMapper(),
             clock, new AssistantProperties(null, null, null, null, properties, null, null, null, null,
-                null, null, null, null));
+                null, null, null, null, null, null));
     }
 
     @Test
@@ -96,7 +96,7 @@ class WeatherServiceTest {
         void dropsACachedForecastWhoseFirstDayIsBeforeTheLocalToday() {
         var longCache = new WeatherService(gateway, profileApps, new ObjectMapper(), clock,
             new AssistantProperties(null, null, null, null, new AssistantProperties.Weather(1440), null, null, null, null,
-                null, null, null, null));
+                null, null, null, null, null, null));
         WeatherLocation location = new WeatherLocation(1, "Lyon", null, "France", 45.75, 4.85);
         String config = "{\"location\":{\"id\":1,\"name\":\"Lyon\",\"country\":\"France\","
             + "\"latitude\":45.75,\"longitude\":4.85}}";

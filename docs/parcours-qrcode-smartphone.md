@@ -6,6 +6,8 @@ Document de cadrage destiné à `/opsx:propose`. Il décrit les décisions reten
 
 Le Raspberry Pi 4 affiche l'application en plein écran dans un navigateur (`http://localhost:8080`). L'écran **n'est pas tactile**. Le smartphone, sur le même réseau local, sert de clavier et de télécommande : il saisit, déclenche et valide ; le Pi voit (caméra) et affiche.
 
+> Depuis la 1.1.0, le kiosque peut aussi être servi en HTTPS (mode `remote`, serveur distant) ; les URL ci-dessous en `http://localhost:8080` correspondent aux modes `dev` et `onprem`. Voir la section « Modes de déploiement » du README.
+
 ### 1.1 Décisions
 
 | # | Sujet | Décision |
@@ -20,7 +22,7 @@ Le Raspberry Pi 4 affiche l'application en plein écran dans un navigateur (`htt
 | 8 | Réseau | **HTTP sur le LAN**, sans Caddy, sans certificat, sans nom de domaine ; QR par **adresse IP** du Pi |
 | 9 | Administration | Les pages `/admin/**` sont adaptées au mobile (adaptation **complète**) ; lien « Administration » dans le menu invité **et** connecté |
 | 10 | Clé de kiosque | **Incluse dès ce changement** (`ASSISTANT_KIOSK_KEY`) |
-| 11 | Mode développement des QR | `assistant.qr.dev-mode` regroupe trois aides : QR cliquable (nouvel onglet, simulation du scan), URL affichée sous le QR, bascule automatique `localhost` ⇄ `127.0.0.1`. **Désactivé en production**, activé en profil `local` |
+| 11 | Mode développement des QR | `assistant.qr.dev-mode` regroupe trois aides : QR cliquable (nouvel onglet, simulation du scan), URL affichée sous le QR, bascule automatique `localhost` ⇄ `127.0.0.1`. **Désactivé en production**, activé en mode `dev` (profil `local`, alias) |
 | 12 | Régénération | Les jetons de QR sont à **usage unique** et le QR est **régénéré immédiatement** après consommation |
 | 13 | Transport temps réel | Polling court (pas de SSE) ; états en mémoire (pas de table) |
 | 14 | Poids : taille du QR | QR poids petit dans un petit emplacement : accepté |
@@ -30,7 +32,7 @@ Le Raspberry Pi 4 affiche l'application en plein écran dans un navigateur (`htt
 - Appairage durable d'un smartphone à un profil.
 - Enrôlement d'un tiers depuis un profil connecté (pas de bouton « ajouter un profil »).
 - Détection réelle de la pose du visage (le guidage est un texte seul).
-- HTTPS, certificats, noms de domaine.
+- HTTPS, certificats, noms de domaine (hors de ce changement ; le HTTPS du kiosque en mode `remote` est traité par le changement `deployment-modes-https`).
 
 ## 2. État actuel du code (constats vérifiés)
 

@@ -28,7 +28,39 @@ public record AssistantProperties(
                 message = "URL http(s) attendue, sans slash final") String publicBaseUrl,
         @Valid @NotNull Kiosk kiosk,
         @Valid @NotNull Handoff handoff,
-        @Valid @NotNull Qr qr) {
+        @Valid @NotNull Qr qr,
+        @Valid @NotNull Http http,
+        @Valid @NotNull Https https) {
+
+    @AssertTrue(message = "Les ports HTTP et HTTPS doivent etre differents")
+    public boolean isHttpAndHttpsPortsDistinct() {
+        return http == null || https == null || !http.enabled() || !https.enabled() || http.port() != https.port();
+    }
+
+    /** Connecteur HTTP : port d'ecoute et port publie vers les smartphones (Docker peut le remapper). */
+    public record Http(
+            boolean enabled,
+            @Min(1) @Max(65535) int port,
+            @Min(1) @Max(65535) int publicPort) {
+    }
+
+    /** Connecteur HTTPS du kiosque : keystore (genere par l'entrypoint Docker ou fourni) et noms du certificat. */
+    public record Https(
+            boolean enabled,
+            @Min(1) @Max(65535) int port,
+            @NotNull String certDir,
+            @NotNull String keystorePath,
+            @NotNull String keystoreType,
+            @NotNull String keystorePassword,
+            @NotNull @Pattern(regexp = "^$|^[A-Za-z0-9.:\\[\\]-]+(,[A-Za-z0-9.:\\[\\]-]+)*$",
+                    message = "Liste de noms ou d'adresses separes par des virgules attendue") String hostnames,
+            @Min(1) @Max(3650) int validityDays) {
+
+        @AssertTrue(message = "HTTPS exige un keystore et son mot de passe (ASSISTANT_HTTPS_KEYSTORE_PATH, ASSISTANT_HTTPS_KEYSTORE_PASSWORD)")
+        public boolean isKeystoreConfiguredWhenEnabled() {
+            return !enabled || (!keystorePath.isBlank() && !keystorePassword.isBlank());
+        }
+    }
 
     /** Cle partagee avec le navigateur du Pi (vide = controle desactive, refuse en production) et cadence de son poll d'etat. */
     public record Kiosk(

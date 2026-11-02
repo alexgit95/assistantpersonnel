@@ -57,4 +57,54 @@ class QrUrlResolverTest {
         assertThat(resolver.baseUrl(request("http", "localhost", 8080))).isEmpty();
         assertThat(resolver.resolve(request("http", "localhost", 8080), "/handoff?t=x")).isEmpty();
     }
+
+    @Test
+    void remoteModeDerivesAnHttpBaseFromTheKioskHost() {
+        var resolver = new QrUrlResolver(Fixtures.withDualProtocol("", 8080));
+        assertThat(resolver.baseUrl(request("https", "serveur.example", 8443))).contains("http://serveur.example:8080");
+        assertThat(resolver.baseUrl(request("https", "10.0.0.5", 8443))).contains("http://10.0.0.5:8080");
+        assertThat(resolver.resolve(request("https", "serveur.example", 8443), "/mobile?s=x"))
+                .contains("http://serveur.example:8080/mobile?s=x");
+    }
+
+    @Test
+    void remoteModeUsesThePublishedHttpPort() {
+        var resolver = new QrUrlResolver(Fixtures.withDualProtocol("", 18080));
+        assertThat(resolver.baseUrl(request("https", "10.0.0.5", 8443))).contains("http://10.0.0.5:18080");
+    }
+
+    @Test
+    void remoteModeOmitsTheDefaultHttpPort() {
+        var resolver = new QrUrlResolver(Fixtures.withDualProtocol("", 80));
+        assertThat(resolver.baseUrl(request("https", "serveur.example", 8443))).contains("http://serveur.example");
+    }
+
+    @Test
+    void remoteModeAcceptsAnIpv6Host() {
+        var resolver = new QrUrlResolver(Fixtures.withDualProtocol("", 8080));
+        assertThat(resolver.baseUrl(request("https", "[2001:db8::1]", 8443))).contains("http://[2001:db8::1]:8080");
+    }
+
+    @Test
+    void remoteModeConfiguredBaseUrlStillWins() {
+        var resolver = new QrUrlResolver(Fixtures.withDualProtocol("http://192.168.1.50:8080", 8080));
+        assertThat(resolver.baseUrl(request("https", "serveur.example", 8443))).contains("http://192.168.1.50:8080");
+    }
+
+    @Test
+    void remoteModeNeverReflectsLoopbackOrInvalidHosts() {
+        var resolver = new QrUrlResolver(Fixtures.withDualProtocol("", 8080));
+        assertThat(resolver.baseUrl(request("https", "localhost", 8443))).isEmpty();
+        assertThat(resolver.baseUrl(request("https", "127.0.0.1", 8443))).isEmpty();
+        assertThat(resolver.baseUrl(request("https", "evil.example/path", 8443))).isEmpty();
+        assertThat(resolver.baseUrl(request("https", "a b", 8443))).isEmpty();
+        assertThat(resolver.baseUrl(request("https", "-bad", 8443))).isEmpty();
+        assertThat(resolver.baseUrl(request("https", "x@evil.example", 8443))).isEmpty();
+    }
+
+    @Test
+    void httpOnlyModesNeverDeriveTheHost() {
+        var resolver = new QrUrlResolver(Fixtures.withQr("", false));
+        assertThat(resolver.baseUrl(request("http", "192.168.1.50", 8080))).isEmpty();
+    }
 }
