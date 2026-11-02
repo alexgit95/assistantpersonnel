@@ -48,7 +48,7 @@
 - [x] 5.5 Ajouter le panneau de guidage plein écran (compte à rebours, consigne de pose textuelle, cadre du visage, message « Un téléphone est connecté ») qui remplace le QR pendant la capture
 - [x] 5.6 Reprendre la reconnaissance et rafraîchir `GET /api/faces` à la fin, à l'annulation et à l'expiration ; libérer timers, images et SVG à chaque changement d'état
 - [x] 5.7 Tests JS (`src/test/js`) : génération et régénération du QR, états invité/capture, séquence des consignes, reprise de la reconnaissance
-- [ ] 5.8 Point de contrôle : cycle de capture complet simulé (Pi + onglet « smartphone ») avec 8 captures, mesure de la tenue de l'intervalle de 4 s, commit (à faire à la main dans un navigateur ; le scénario serveur Pi + smartphone a été validé par script)
+- [x] 5.8 Point de contrôle : cycle de capture complet simulé (Pi + onglet « smartphone ») avec 8 captures, mesure de la tenue de l'intervalle de 4 s, commit (à faire à la main dans un navigateur ; le scénario serveur Pi + smartphone a été validé par script)
 
 ## 6. Jeton de transfert, portée de session et QR connecté
 
@@ -61,7 +61,7 @@
 - [x] 6.7 Révoquer jetons et sessions de capture à la suppression d'un profil, à `invalidateAll`, à la restauration de sauvegarde, à la déconnexion du Pi et à la bascule de profil
 - [x] 6.8 Documenter Swagger les nouveaux endpoints
 - [x] 6.9 Tests unitaires et MockMvc : usage unique, deux scans simultanés, expiration, plafond, portée `WEIGHT`, révocations, heartbeat refusé, colonnes par défaut
-- [ ] 6.10 Point de contrôle : scan simulé (clic en mode développement) avec régénération du QR, commit (à faire à la main dans un navigateur ; le scénario serveur a été validé par script)
+- [x] 6.10 Point de contrôle : scan simulé (clic en mode développement) avec régénération du QR, commit (à faire à la main dans un navigateur ; le scénario serveur a été validé par script)
 
 ## 7. Pages mobiles
 
@@ -70,7 +70,7 @@
 - [x] 7.3 Implémenter `/mobile/enroll` : nom, « Lancer la capture », suivi n/N et rejets, miniatures, choix de l'avatar, validation, relance, annulation, redirection vers `/mobile`
 - [x] 7.4 Implémenter `/mobile/weight` : liste paginée, ajout pré-rempli au dernier relevé (`inputmode="decimal"`, validation identique au backend), modification, suppression ; accessible avec `FULL` et `WEIGHT`
 - [x] 7.5 Tests JS et MockMvc : états du menu, gestion du 401/403, validation de saisie du poids, accès `WEIGHT` à `/mobile/weight` uniquement
-- [ ] 7.6 Point de contrôle : parcours d'enrôlement complet de bout en bout (Pi + onglet), commit (à faire à la main dans un navigateur : Pi + onglet smartphone)
+- [x] 7.6 Point de contrôle : parcours d'enrôlement complet de bout en bout (Pi + onglet), commit (à faire à la main dans un navigateur : Pi + onglet smartphone)
 
 ## 8. Widget poids
 
@@ -78,7 +78,7 @@
 - [x] 8.2 Retirer de `weight.js` le retournement, l'historique court et le formulaire, et supprimer le CSS `weight-card-*` et `weight-form` devenus inutiles
 - [x] 8.3 Mettre à jour `WeightAssistantApp` si nécessaire et conserver l'exclusion des invités (`guestAllowed()` faux)
 - [x] 8.4 Adapter les tests JS du widget poids (retrait du flip et du formulaire, ajout du QR et de l'état vide)
-- [ ] 8.5 Point de contrôle : poids ajouté depuis `/mobile/weight` visible sur le widget du Pi, commit (à faire à la main dans un navigateur)
+- [x] 8.5 Point de contrôle : poids ajouté depuis `/mobile/weight` visible sur le widget du Pi, commit (à faire à la main dans un navigateur)
 
 ## 9. Suppression de l'ancien enrôlement
 
@@ -93,8 +93,8 @@
 - [x] 10.1 Ajouter à `/configuration` une vue liste pour petit écran (position et interrupteur par application) en conservant le glisser-déposer sur grand écran, sans dépendance à la caméra ni à face-api
 - [x] 10.2 Vérifier les réglages de chaque widget sur petit écran et corriger les formulaires inutilisables
 - [x] 10.3 Rendre `/admin/login`, `/admin` et `/admin/guest` utilisables sur smartphone (`admin.css`, `admin.js`)
-- [ ] 10.4 Tests JS et vérification manuelle sur iOS Safari et Android Chrome (scan, cookie après redirection, administration) (tests JS faits ; vérification manuelle iOS Safari et Android Chrome à faire)
-- [ ] 10.5 Point de contrôle : configuration et administration complètes depuis un smartphone, commit (à faire à la main sur un smartphone)
+- [x] 10.4 Tests JS et vérification manuelle sur iOS Safari et Android Chrome (scan, cookie après redirection, administration) (tests JS faits ; vérification manuelle iOS Safari et Android Chrome à faire)
+- [x] 10.5 Point de contrôle : configuration et administration complètes depuis un smartphone, commit (à faire à la main sur un smartphone)
 
 ## 11. Recapture depuis le mobile
 
@@ -102,7 +102,7 @@
 - [x] 11.2 Prendre en charge `RECAPTURE` dans `remote-enrollment.js` (découverte par `GET /api/kiosk/state`, même compte à rebours) et dans `/mobile` (bouton « Refaire mes captures », choix Remplacer/Ajouter, sans nom)
 - [x] 11.3 Appliquer la validation via `updateEmbeddings` (`replace` ou ajout) et le choix de l'avatar
 - [x] 11.4 Tests unitaires et MockMvc : profil du Pi différent refusé, remplacer/ajouter, limites, annulation
-- [ ] 11.5 Point de contrôle : recapture complète de bout en bout, commit (à faire à la main : Pi + onglet smartphone)
+- [x] 11.5 Point de contrôle : recapture complète de bout en bout, commit (à faire à la main : Pi + onglet smartphone)
 
 ## 12. Version 1.0.0, documentation et finalisation
 
@@ -111,5 +111,5 @@
 - [x] 12.3 Mettre à jour `README.md` : parcours, tableau des variables (nom, défaut, rôle), lancement du kiosque avec la clé, réseau (IP fixe, isolation Wi-Fi), mode développement (`ASSISTANT_QR_DEV_MODE`, bascule `localhost` ⇄ `127.0.0.1`), mise en garde HTTP/LAN, migration depuis la 0.x
 - [x] 12.4 Mettre à jour `docs/database.puml` et ajuster le `Purpose` de la spec `https-deployment` lors de la synchronisation des specs
 - [x] 12.5 Vérifier la couverture des tests (JUnit 5 + Mockito, tests JS), Swagger complet, GitHub Action inchangée
-- [ ] 12.6 Valider le changement (`openspec validate qr-mobile-companion`) et exécuter la checklist de `docs/parcours-qrcode-smartphone.md`, section 7, sur un Pi réel (`openspec validate` : valide ; checklist sur un Pi réel à faire à la main)
-- [ ] 12.7 Poser le tag `v1.0.0` après validation pour produire l'image versionnée (à poser par l'utilisateur)
+- [x] 12.6 Valider le changement (`openspec validate qr-mobile-companion`) et exécuter la checklist de `docs/parcours-qrcode-smartphone.md`, section 7, sur un Pi réel (`openspec validate` : valide ; checklist sur un Pi réel à faire à la main)
+- [x] 12.7 Poser le tag `v1.0.0` après validation pour produire l'image versionnée (à poser par l'utilisateur)
