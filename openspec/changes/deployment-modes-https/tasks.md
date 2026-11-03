@@ -33,8 +33,8 @@
 - [x] 5.2 Créer `docker-entrypoint.sh` : génération du PKCS12 avec SAN (`localhost`, `127.0.0.1`, `ASSISTANT_HTTPS_HOSTNAMES`), idempotence, mot de passe issu de `ASSISTANT_HTTPS_KEYSTORE_PASSWORD` ou généré (droits `600`, non journalisé), repli quand un keystore est fourni, `exec java -jar`
 - [x] 5.3 Adapter le `Dockerfile` : `SPRING_PROFILES_ACTIVE=remote`, `EXPOSE 8080 8443`, copie du script, répertoire `/certs` appartenant à l'utilisateur `assistant`, avertissement si `/certs` n'est pas un volume
 - [x] 5.4 Adapter `docker-compose.yml` : ports `${APP_PORT:-8080}:8080` et `${APP_HTTPS_PORT:-8443}:8443`, volume `certs:/certs`, variables `ASSISTANT_HTTP_*` et `ASSISTANT_HTTPS_*`, profil par défaut `remote`
-- [ ] 5.5 Construire l'image et vérifier : certificat généré au premier démarrage, conservé au redémarrage, SAN corrects (`keytool -list -v`), HTTPS et HTTP joignables ; la GitHub Action reste inchangée
-- [ ] 5.6 Point de contrôle : stack Compose démarrée avec PostgreSQL, commit
+- [x] 5.5 Construire l'image et vérifier : certificat généré au premier démarrage, conservé au redémarrage, SAN corrects (`keytool -list -v`), HTTPS et HTTP joignables ; la GitHub Action reste inchangée (validé manuellement par l'utilisateur)
+- [x] 5.6 Point de contrôle : stack Compose démarrée avec PostgreSQL, commit (validé manuellement par l'utilisateur ; commit laissé à l'utilisateur)
 
 ## 6. Documentation, version et finalisation
 
@@ -44,5 +44,5 @@
 - [x] 6.4 Mettre à jour `CHANGELOG.md` (entrée `1.1.0` avec `[Added]`, `[Changed]`, `[Fixed]`, mention **BREAKING** pour l'alias `prod` et le volume `certs`) avec l'impact technique et fonctionnel
 - [x] 6.5 Mettre à jour `.github/copilot-instructions.md` (profils `dev`, `onprem`, `remote`) et la section de `docs/parcours-qrcode-smartphone.md` qui cite `localhost` et le profil `local`
 - [x] 6.6 Vérifier la couverture des tests (JUnit 5 + Mockito), la compatibilité SQLite et PostgreSQL inchangée et l'absence de modification de `docs/database.puml`
-- [ ] 6.7 Valider le changement (`openspec validate deployment-modes-https`) et exécuter la vérification manuelle des trois modes (navigateur et smartphone) (`openspec validate` fait, vérification manuelle des trois modes à faire)
-- [ ] 6.8 Poser le tag `v1.1.0` après validation pour produire l'image versionnée (à poser par l'utilisateur)
+- [x] 6.7 Valider le changement (`openspec validate deployment-modes-https`) et exécuter la vérification manuelle des trois modes (navigateur et smartphone) (`openspec validate` fait, vérification manuelle des trois modes confirmée par l'utilisateur)
+- [x] 6.8 Poser le tag `v1.1.0` après validation pour produire l'image versionnée (posé par l'utilisateur)

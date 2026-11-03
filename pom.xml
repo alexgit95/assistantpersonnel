@@ -13,7 +13,7 @@
 
     <groupId>com.assistant</groupId>
     <artifactId>assistant</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <name>assistant</name>
     <description>Assistant personnel avec reconnaissance faciale cote navigateur</description>
 

@@ -2,7 +2,7 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
-## [Unreleased]
+## [1.1.1]
 
 ### Added
 - Écran d'accueil : quand le serveur refuse (403) les appels réservés au kiosque, un message rouge à la place du QR indique pourquoi (« clé de kiosque absente » ou « clé de kiosque refusée »), au lieu d'un QR simplement absent. Technique : `kiosk.js` intercepte le 403 de `/api/kiosk/state`, masque le QR et affiche `#kiosk-key-error` ; le message disparaît dès que l'état est de nouveau lu. Texte choisi par `kioskKeyProblem` (`kiosk-key.js`), test dans `kiosk-key.test.mjs`.
