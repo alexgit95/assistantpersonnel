@@ -76,13 +76,13 @@
             },
             {
               "RecordedAtTime": "2026-10-30T08:11:01.640Z",
-              "ItemIdentifier": "MeC_Bus_PC:Item::20261030.20.PALS.IDFM.C01154.R.EXP.50236375.96:LOC",
+              "ItemIdentifier": "MeC_Bus_PC:Item::20261030.20.PALS.IDFM.C01193.R.EXP.50236375.96:LOC",
               "MonitoringRef": {
                 "value": "STIF:StopPoint:Q:24377:"
               },
               "MonitoredVehicleJourney": {
                 "LineRef": {
-                  "value": "STIF:Line::C01154:"
+                  "value": "STIF:Line::C01193:"
                 },
                 "OperatorRef": {
                   "value": "MeC_Bus_PC:Operator::1060:"
@@ -136,6 +136,82 @@
                     "value": "Porte d'Orleans"
                   }
                 ]
+              }
+            },
+            {
+              "RecordedAtTime": "2026-10-30T08:11:40.000Z",
+              "ItemIdentifier": "MeC_Bus_PC:Item::20261030.21.PALS.IDFM.C01083.R.EXP.50236375.96:LOC",
+              "MonitoringRef": {
+                "value": "STIF:StopPoint:Q:24377:"
+              },
+              "MonitoredVehicleJourney": {
+                "LineRef": {
+                  "value": "STIF:Line::C01083:"
+                },
+                "DirectionName": [
+                  {
+                    "value": "Gare du Nord"
+                  }
+                ],
+                "DestinationName": [
+                  {
+                    "value": "Gare du Nord"
+                  }
+                ],
+                "MonitoredCall": {
+                  "StopPointName": [
+                    {
+                      "value": "Carnot"
+                    }
+                  ],
+                  "VehicleAtStop": false,
+                  "DestinationDisplay": [
+                    {
+                      "value": "Gare du Nord"
+                    }
+                  ],
+                  "ExpectedDepartureTime": "2026-10-30T08:29:10.000Z",
+                  "DepartureStatus": "onTime",
+                  "ArrivalStatus": ""
+                }
+              }
+            },
+            {
+              "RecordedAtTime": "2026-10-30T08:12:05.000Z",
+              "ItemIdentifier": "SNCF_ACCES_CLOUD:Item::DUASN180111F05001.C01742:LOC",
+              "MonitoringRef": {
+                "value": "STIF:StopPoint:Q:24377:"
+              },
+              "MonitoredVehicleJourney": {
+                "LineRef": {
+                  "value": "STIF:Line::C01742:"
+                },
+                "DirectionName": [
+                  {
+                    "value": "Marne-la-Vallée Chessy"
+                  }
+                ],
+                "DestinationName": [
+                  {
+                    "value": "Marne-la-Vallée Chessy"
+                  }
+                ],
+                "MonitoredCall": {
+                  "StopPointName": [
+                    {
+                      "value": "Carnot"
+                    }
+                  ],
+                  "VehicleAtStop": false,
+                  "DestinationDisplay": [
+                    {
+                      "value": "Marne-la-Vallée Chessy"
+                    }
+                  ],
+                  "ExpectedDepartureTime": "2026-10-30T08:24:40.000Z",
+                  "DepartureStatus": "onTime",
+                  "ArrivalStatus": ""
+                }
               }
             }
           ],

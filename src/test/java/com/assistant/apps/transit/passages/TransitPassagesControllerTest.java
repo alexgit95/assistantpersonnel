@@ -57,8 +57,9 @@ class TransitPassagesControllerTest {
         when(service.stops(42L)).thenReturn(List.of(stop));
         when(service.next(42L)).thenReturn(new NextPassagesService.Overview(false, null, List.of(
                 new NextPassagesService.StopPassages(stop, "OK", null, Instant.parse("2026-10-30T08:12:30Z"),
-                        List.of(new NextPassagesService.PassageView("Bus 172", "00aa00", "Porte d'Orléans", 5,
-                                Instant.parse("2026-10-30T08:17:30Z"), "onTime"))))));
+                        List.of(new NextPassagesService.PassageView("172", "00aa00", "Porte d'Orléans", 5,
+                                Instant.parse("2026-10-30T08:17:30Z"), "onTime")))),
+                Instant.parse("2026-10-30T08:12:30Z")));
 
         mvc.perform(get("/api/transit-passages/stops/search").param("query", "carnot"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].arrid").value("24377"));
@@ -71,6 +72,8 @@ class TransitPassagesControllerTest {
         mvc.perform(get("/api/transit-passages/next"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stops[0].passages[0].minutes").value(5))
+                .andExpect(jsonPath("$.stops[0].passages[0].line").value("172"))
+                .andExpect(jsonPath("$.updatedAt").exists())
                 .andExpect(jsonPath("$.stops[0].updatedAt").exists());
 
         verify(service).saveStops(42L, List.of(stop));

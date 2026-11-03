@@ -22,6 +22,24 @@ export function moveWidget(preferences, appKey, targetSlot) {
   return next;
 }
 
+/** Premier emplacement sans widget, ou l'emplacement principal (son widget est alors d\u00e9plac\u00e9) s'ils sont tous pris. */
+export function firstFreeSlot(preferences) {
+  const free = SLOT_NAMES.findIndex((_, slot) => !preferences.some((app) => app.enabled && app.position === slot));
+  return free < 0 ? 0 : free;
+}
+
+/** Interrupteur de la vue liste : place le widget dans un emplacement libre, ou le retire de l'\u00e9cran. */
+export function toggleWidget(preferences, appKey, enabled) {
+  if (!enabled) {
+    return moveWidget(preferences, appKey, UNASSIGNED_SLOT);
+  }
+  const current = preferences.find((app) => app.key === appKey);
+  if (current?.enabled) {
+    return moveWidget(preferences, appKey, current.position);
+  }
+  return moveWidget(preferences, appKey, firstFreeSlot(preferences));
+}
+
 export function toAppSelections(preferences) {
   return preferences.map((app) => ({
     key: app.key,

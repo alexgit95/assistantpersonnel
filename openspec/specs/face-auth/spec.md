@@ -12,7 +12,7 @@ Le système SHALL effectuer la détection et le calcul d'embeddings faciaux excl
 - **THEN** seul l'identifiant du profil est envoyé au backend, aucune image ni flux vidéo
 
 ### Requirement: Connexion par visage
-Le système SHALL ouvrir une session pour le profil dont la distance d'embedding avec le visage détecté est inférieure au seuil configuré.
+Le système SHALL ouvrir une session pour le profil dont la distance d'embedding avec le visage détecté est inférieure au seuil configuré. L'appel `POST /api/auth/login` MUST être réservé au Pi par la clé de kiosque.
 
 #### Scenario: Visage reconnu
 - **WHEN** un visage correspond à un profil sous le seuil
@@ -22,8 +22,12 @@ Le système SHALL ouvrir une session pour le profil dont la distance d'embedding
 - **WHEN** aucun profil ne correspond sous le seuil
 - **THEN** aucune session n'est ouverte et un état « non reconnu » est affiché
 
+#### Scenario: Appel sans clé de kiosque
+- **WHEN** un client sans clé de kiosque appelle `POST /api/auth/login`
+- **THEN** la réponse est 403 et aucune session n'est créée
+
 ### Requirement: Session glissante de 10 minutes
-La session SHALL expirer 10 minutes (configurable) après la dernière détection du profil courant.
+La session faciale du Pi SHALL expirer 10 minutes (configurable) après la dernière détection du profil courant. L'appel `POST /api/auth/heartbeat` MUST être réservé au Pi par la clé de kiosque. Les sessions ouvertes pour un smartphone (transfert ou enrôlement) MUST NOT être glissantes : elles ont une durée fixe et ne sont jamais prolongées.
 
 #### Scenario: Prolongation
 - **WHEN** le profil courant est revu pendant la session
@@ -32,6 +36,10 @@ La session SHALL expirer 10 minutes (configurable) après la dernière détectio
 #### Scenario: Expiration
 - **WHEN** le profil courant n'est plus revu pendant 10 minutes
 - **THEN** la session est invalidée côté serveur et l'écran revient à la reconnaissance
+
+#### Scenario: Session de smartphone
+- **WHEN** un smartphone tente de prolonger sa session par heartbeat
+- **THEN** l'appel est refusé car réservé au Pi
 
 ### Requirement: Scan ralenti une fois connecté
 Le système SHALL poursuivre la détection après connexion à une fréquence réduite (5 s par défaut) et MUST NOT l'arrêter.
@@ -90,10 +98,10 @@ Le système SHALL proposer, lorsque `ASSISTANT_RECOGNITION_DEBUG` vaut true, l'a
 - **THEN** ces mesures s'affichent à chaque détection
 
 ### Requirement: Chargement avec progression et cache
-Le système SHALL afficher une barre de progression accessible pendant le chargement de la bibliothèque de reconnaissance, des manifestes, des poids et des binaires WASM. Les URL versionnées SHALL bénéficier du cache HTTP du navigateur ; les assets locaux Docker SHALL être servis avec un cache navigateur à durée bornée.
+Le système SHALL afficher une barre de progression accessible pendant le chargement de la bibliothèque de reconnaissance, des manifestes, des poids et des binaires WASM. Les URL versionnées SHALL bénéficier du cache HTTP du navigateur ; les assets locaux Docker SHALL être servis avec un cache navigateur à durée bornée. Les assets MUST provenir du CDN en modes `dev` et `onprem` et de `/vendor/face-api` (intégrés à l'image) en mode `remote`.
 
-#### Scenario: Premier chargement local
-- **WHEN** un navigateur en profil `local` ne possède pas encore les assets en cache
+#### Scenario: Premier chargement en CDN
+- **WHEN** un navigateur en mode `dev` ou `onprem` ne possède pas encore les assets en cache
 - **THEN** la progression et le nom de la ressource chargée sont affichés, puis la reconnaissance démarre une fois tous les assets prêts
 
 #### Scenario: Chargements suivants
@@ -101,7 +109,7 @@ Le système SHALL afficher une barre de progression accessible pendant le charge
 - **THEN** il les réutilise sans les télécharger à nouveau tant qu'ils restent frais
 
 #### Scenario: Docker sans accès CDN à l'exécution
-- **WHEN** l'application est exécutée avec le profil Docker `prod`
+- **WHEN** l'application est exécutée en mode `remote` (ou avec l'alias `prod`)
 - **THEN** bibliothèque, modèles et WASM proviennent de `/vendor/face-api` intégrés à l'image, sans requête vers un CDN à l'exécution
 
 #### Scenario: Échec de téléchargement

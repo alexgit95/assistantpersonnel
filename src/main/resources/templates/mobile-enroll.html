@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Assistant | Créer mon profil</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/mobile.css}">
+</head>
+<body>
+<main class="mobile-page">
+    <a class="mobile-back" th:href="@{/mobile}">Menu</a>
+    <h1 id="enroll-title">Créer mon profil</h1>
+    <p id="enroll-message" role="status" aria-live="polite">Chargement…</p>
+
+    <section id="step-start" hidden>
+        <div id="name-field">
+            <label for="profile-name">Votre prénom ou nom</label>
+            <input id="profile-name" name="name" type="text" maxlength="60" autocomplete="name" required>
+        </div>
+        <fieldset id="recapture-options" hidden>
+            <legend>Traitement des nouvelles captures</legend>
+            <label><input type="radio" name="embedding-mode" value="add" checked> Ajouter aux captures existantes</label>
+            <label><input type="radio" name="embedding-mode" value="replace"> Remplacer les captures existantes</label>
+        </fieldset>
+        <p id="start-help">Quand vous lancez la capture, placez-vous face à l’écran : la caméra de l’écran prend les photos et les consignes de pose y sont affichées.</p>
+        <button id="start-button" type="button" class="mobile-primary">Lancer la capture</button>
+    </section>
+
+    <section id="step-capture" hidden aria-live="polite">
+        <p id="capture-countdown" class="mobile-big"></p>
+        <p id="capture-guidance"></p>
+        <p id="capture-progress" role="status"></p>
+        <progress id="capture-bar" max="1" value="0"></progress>
+        <button id="capture-cancel" type="button">Annuler</button>
+    </section>
+
+    <section id="step-review" hidden>
+        <h2>Choisissez votre photo de profil</h2>
+        <div id="avatar-gallery" class="mobile-avatars" role="radiogroup" aria-label="Photo de profil"></div>
+        <div class="mobile-actions">
+            <button id="review-confirm" type="button" class="mobile-primary">Valider</button>
+            <button id="review-restart" type="button">Recommencer</button>
+            <button id="review-cancel" type="button">Annuler</button>
+        </div>
+    </section>
+
+    <p><a id="enroll-end-link" th:href="@{/mobile}" hidden>Retour au menu</a></p>
+</main>
+<script type="module" th:src="@{/js/mobile-enroll.js}"></script>
+</body>
+</html>

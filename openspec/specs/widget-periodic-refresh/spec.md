@@ -41,17 +41,6 @@ Le système SHALL exécuter pour chaque instance des widgets météo et poids un
 - **WHEN** `prefers-reduced-motion: reduce` est actif
 - **THEN** le tracé n'est pas animé
 
-### Requirement: Pause pendant la saisie du poids
-Le widget poids SHALL ignorer un cycle tant que la carte est retournée sur la face de saisie ou qu'un champ du formulaire a le focus, puis ré-armer le cycle suivant.
-
-#### Scenario: Carte retournée
-- **WHEN** le cycle se déclenche alors que la carte est retournée
-- **THEN** aucun rechargement ni réécriture n'est effectué et un nouveau délai est armé
-
-#### Scenario: Statut préservé
-- **WHEN** le message « Mesure ajoutée. » est affiché pendant la saisie
-- **THEN** il n'est pas effacé par un cycle
-
 ### Requirement: Arrêt et désactivation du cycle
 Le cycle SHALL s'arrêter quand le widget n'est plus rattaché au document et SHALL ne pas démarrer quand l'animation d'écriture est désactivée.
 

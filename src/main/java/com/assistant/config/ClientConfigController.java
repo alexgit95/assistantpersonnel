@@ -19,9 +19,11 @@ public class ClientConfigController {
     static final int EMBEDDING_SIZE = com.assistant.profile.EmbeddingCodec.SIZE;
 
     private final AssistantProperties properties;
+    private final AppVersion appVersion;
 
-    public ClientConfigController(AssistantProperties properties) {
+    public ClientConfigController(AssistantProperties properties, AppVersion appVersion) {
         this.properties = properties;
+        this.appVersion = appVersion;
     }
 
     @Operation(summary = "Reglages de reconnaissance, de session et d'interface utiles au navigateur")
@@ -42,9 +44,11 @@ public class ClientConfigController {
                 r.matchThreshold(), r.matchMargin(), r.switchConfirmations(), r.detectorInputSize(),
                 r.detectorMinConfidence(), r.minFaceSizePx(), r.cameraWidth(),
                 r.backend().name().toLowerCase(java.util.Locale.ROOT), r.debug(),
-                e.minPhotos(), e.maxPhotos(), ui.typingEnabled(), ui.typingSpeedMs(), EMBEDDING_SIZE,
+                e.photos(), ui.typingEnabled(), ui.typingSpeedMs(), EMBEDDING_SIZE,
                 assets.mode().name().toLowerCase(java.util.Locale.ROOT), assets.faceApiUrl(), assets.modelsUrl(),
-                assets.wasmScriptUrl(), assets.wasmUrl());
+                assets.wasmScriptUrl(), assets.wasmUrl(),
+                properties.kiosk().pollIdleMs(), properties.kiosk().pollActiveMs(), properties.qr().devMode(),
+                properties.qr().sizeRem(), appVersion.display());
     }
 
     public record ClientConfig(
@@ -62,8 +66,7 @@ public class ClientConfigController {
             int cameraWidth,
             String recognitionBackend,
             boolean recognitionDebug,
-            int enrollmentMinPhotos,
-            int enrollmentMaxPhotos,
+            int enrollmentPhotos,
             boolean typingEnabled,
             int typingSpeedMs,
             int embeddingSize,
@@ -71,6 +74,11 @@ public class ClientConfigController {
             String faceApiUrl,
             String faceModelsUrl,
             String wasmScriptUrl,
-            String wasmUrl) {
+            String wasmUrl,
+            int kioskPollIdleMs,
+            int kioskPollActiveMs,
+            boolean qrDevMode,
+            double qrSizeRem,
+            String appVersion) {
     }
 }

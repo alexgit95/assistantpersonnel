@@ -124,7 +124,19 @@ class AuthControllerTest {
         mvc.perform(get("/api/auth/session").cookie(cookie("tok")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.profileId").value(5))
-                .andExpect(jsonPath("$.remainingSeconds").value(42));
+                .andExpect(jsonPath("$.remainingSeconds").value(42))
+                .andExpect(jsonPath("$.scope").value("FULL"));
+    }
+
+    @Test
+    void currentSessionExposesTheWeightScopeOfAPhoneSession() throws Exception {
+        when(sessionService.authenticate("tok"))
+                .thenReturn(Optional.of(new AuthenticatedSession("h", 5L, 500L, SessionScope.WEIGHT)));
+        when(sessionService.profileName(5L)).thenReturn("Alice");
+
+        mvc.perform(get("/api/auth/session").cookie(cookie("tok")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scope").value("WEIGHT"));
     }
 
     @Test

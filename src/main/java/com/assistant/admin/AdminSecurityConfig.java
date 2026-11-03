@@ -20,7 +20,8 @@ public class AdminSecurityConfig {
             throws Exception {
         http.authenticationProvider(adminProvider)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/admin/login", "/", "/enroll", "/api/**", "/apps/**", "/css/**", "/js/**",
+                        .requestMatchers("/admin/login", "/", "/mobile/**", "/handoff", "/api/**", "/apps/**",
+                                "/css/**", "/js/**",
                                 "/vendor/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -37,7 +38,9 @@ public class AdminSecurityConfig {
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"));
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+                // HSTS forcerait les smartphones en HTTPS (port 8080 conserve) alors qu'ils doivent rester en HTTP.
+                .headers(headers -> headers.httpStrictTransportSecurity(hsts -> hsts.disable()));
         return http.build();
     }
 }

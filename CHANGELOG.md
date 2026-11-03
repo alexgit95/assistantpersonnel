@@ -2,6 +2,83 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [1.1.2]
+
+### Added
+- Écran du kiosque : la version de l'application s'affiche en bas à droite, en texte discret, au format `version_du_pom-sha` (par exemple `1.1.1-a1b2c3d`, `1.1.1-dev` sans SHA connu). Technique : `AppVersion` combine `BuildProperties` (goal `build-info`) et le SHA de la variable `GIT_COMMIT` (image Docker), à défaut de `git.properties` (`git-commit-id-maven-plugin`, sans échec si `.git` est absent) ; le champ `appVersion` est ajouté à `GET /api/config` et la page d'accueil embarque la version avec laquelle elle a été servie (`<meta name="assistant-version">`).
+- Kiosque : toutes les 60 secondes, il relit la configuration des widgets (`GET /api/apps`) et ne ré-affiche que si elle a changé : un emplacement ou un réglage modifié depuis l'onglet de configuration ou un smartphone est pris en compte sans rechargement manuel, y compris la configuration de l'écran invité. Technique : module pur `kiosk-refresh.js` (comparaison de signature de la liste), testé par `kiosk-refresh.test.mjs`.
+- Kiosque : si le serveur annonce une autre version que celle de la page, la page se recharge, mais seulement quand personne n'est connecté ; garde-fou contre toute boucle (un seul rechargement par version serveur, `sessionStorage`). Aucun ré-affichage ni rechargement pendant un enrôlement en cours (compte à rebours, capture, choix de l'avatar), une connexion ou une déconnexion en cours, ou quand l'onglet est masqué.
+- Tests : `AppVersionTest`, `appVersion` et en-têtes de cache dans `SessionFlowIntegrationTest`, `kiosk-refresh.test.mjs`.
+
+## [1.1.1]
+
+### Added
+- Widget « Prochains passages » : les passages d'un arrêt sont regroupés par ligne. Les 3 prochains passages d'une ligne s'affichent à la suite, puis ceux de la ligne suivante, sans jamais entremêlés ; les blocs sont triés par leur premier passage. Technique : `NextPassagesService.selectPassages` regroupe par `lineId` avant tout plafond, ce qui empêche une ligne fréquente de masquer une ligne rare. La réponse de `GET /api/transit-passages/next` gagne un champ `updatedAt` (la plus ancienne heure de mise à jour des arrêts ayant des données).
+- Mode TEST des prochains passages : le fichier `docs/reponse-prochain-passage.json` couvre désormais quatre lignes (bus 125, 172, 38 et RER A) et `MockPassageGateway` en rejoue 12 passages (3 par ligne).
+- Tests : regroupement, tri des blocs, ligne rare non masquée, ligne à moins de 3 passages, plafonds de lignes, heure unique (`NextPassagesServiceTest`, `MockPassageGatewayTest`, `TransitPassagesControllerTest`, `transit-passages-widget.test.mjs`).
+- Écran d'accueil : quand le serveur refuse (403) les appels réservés au kiosque, un message rouge à la place du QR indique pourquoi (« clé de kiosque absente » ou « clé de kiosque refusée »), au lieu d'un QR simplement absent. Technique : `kiosk.js` intercepte le 403 de `/api/kiosk/state`, masque le QR et affiche `#kiosk-key-error` ; le message disparaît dès que l'état est de nouveau lu. Texte choisi par `kioskKeyProblem` (`kiosk-key.js`), test dans `kiosk-key.test.mjs`.
+
+### Changed
+- Les fichiers `/js/**` et `/css/**` sont servis avec `Cache-Control: no-cache` (revalidation à chaque chargement) afin qu'un rechargement après déploiement récupère le nouveau code ; `/vendor/**` garde son cache de 30 jours. Le mode debug (`#debug`) est décalé de quelques pixels pour ne pas chevaucher la version.
+- Widget « Prochains passages » : le plafond de 6 passages (1 ou 2 arrêts) ou 4 (3 arrêts) par arrêt est remplacé par un plafond de lignes par arrêt, chacune avec ses 3 prochains passages : 4 lignes avec 1 arrêt, 2 avec 2 arrêts, 1 avec 3 arrêts (un arrêt indisponible compte). Fonctionnel : l'affichage est plus lisible et son volume borné, le kiosque n'ayant ni souris ni clavier pour défiler.
+- Widget « Prochains passages » : chaque rangée affiche la ligne (la lettre du train ou le numéro du bus, sans « Bus » ni nom de réseau), la destination et le temps restant ; une seule heure « Mis à jour HH:MM » (Europe/Paris, sans date) remplace l'heure par arrêt ; l'espacement vertical entre les rangées est augmenté. Technique : `PassageView.line` utilise `TransitLine.shortName` (repli sur l'identifiant de ligne) ; le widget Transports garde son libellé complet.
+
+## [1.1.0] - 2026-11-02
+
+### Added
+- Modes de déploiement `dev` (défaut), `onprem` et `remote`, choisis par le profil Spring (`spring.profiles.active` dans un fichier de propriétés, `SPRING_PROFILES_ACTIVE` ou `--spring.profiles.active`). Chaque mode assemble des profils d'axe par groupes de profils : `dev` = `sqlite`, `assets-cdn`, `http-only`, `qr-dev` ; `onprem` = `sqlite`, `assets-cdn`, `http-only` ; `remote` = `postgres`, `https-dual`. Fonctionnel : le poste du développeur et l'ordinateur du miroir tournent sans Docker en SQLite ; le serveur distant (intégration, production B) tourne en Docker avec PostgreSQL.
+- Mode `remote` : HTTPS (8443, kiosque et webcam) et HTTP (8080, smartphones) simultanés. `HttpConnectorConfiguration` ajoute un connecteur Tomcat HTTP au port principal HTTPS (SSL bundle `kiosk`) ; refus de démarrer avec un message explicite si le keystore est illisible. Nouvelles propriétés `assistant.http.*` (`enabled`, `port`, `public-port`) et `assistant.https.*` (`enabled`, `port`, `cert-dir`, `keystore-path`, `keystore-type`, `keystore-password`, `hostnames`, `validity-days`) avec validations et variables `ASSISTANT_HTTP_*` / `ASSISTANT_HTTPS_*`.
+- Certificat HTTPS auto-signé généré au premier démarrage du conteneur par `scripts/docker-entrypoint.sh` (`keytool`, RSA 2048, SAN `localhost`, `127.0.0.1` et `ASSISTANT_HTTPS_HOSTNAMES`, validité `ASSISTANT_HTTPS_VALIDITY_DAYS`), stocké dans le volume `certs` avec un mot de passe aléatoire en droits restreints, jamais régénéré s'il existe ; keystore PKCS12 fourni possible (`ASSISTANT_HTTPS_KEYSTORE_PATH`). Chaque déploiement a sa propre clé privée.
+- URL des QR dérivée en mode `remote` : `http://<hôte du kiosque>:<port HTTP publié>` (hôte validé, uniquement sur les appels réservés au kiosque), après `ASSISTANT_PUBLIC_BASE_URL` et la bascule `localhost` ⇄ `127.0.0.1` du mode `dev`. `ASSISTANT_HTTP_PUBLIC_PORT` (reporté depuis `APP_PORT` dans le compose) fixe le port des QR.
+- README : section « Modes de déploiement » (tableau des trois modes, choix du mode par fichier, variable ou argument, propriétés à valoriser par mode, certificat, acceptation dans le navigateur, mise en garde sur le HTTP), section de migration vers la 1.1.
+- Tests : profils par mode (`DeploymentModeProfilesTest`), validation des propriétés HTTP/HTTPS, connecteur additionnel (`HttpConnectorConfigurationTest`), HTTP et HTTPS simultanés avec un keystore de test (`DualConnectorIntegrationTest`), dérivation de l'URL des QR, absence de HSTS.
+
+### Changed
+- **BREAKING** : le profil `prod` devient un alias de `remote` et ouvre donc aussi le port HTTPS 8443. Les stacks existantes doivent publier ce port, monter le volume `certs` (le nouveau `docker-compose.yml` le fait) et renseigner `ASSISTANT_HTTPS_HOSTNAMES` ; le navigateur du kiosque passe à `https://<hôte>:8443/?kiosk=<clé>`. `local` reste un alias de `dev`. L'image et le compose démarrent par défaut en `remote`.
+- `application-local.properties` et `application-prod.properties` sont remplacés par des fichiers d'axe (`application-sqlite.properties`, `application-postgres.properties`, `application-assets-cdn.properties`, `application-http-only.properties`, `application-https-dual.properties`, `application-qr-dev.properties`). `spring.profiles.default` passe de `local` à `dev`.
+- La clé de kiosque est obligatoire en `onprem`, `remote` et `prod` (le démarrage échoue si elle est vide) et facultative en `dev` (`KioskStartupCheck`).
+- HSTS désactivé et cookie de session non `Secure` par défaut : un nom de domaine avec HSTS ferait passer les smartphones de `http://hôte:8080` en HTTPS. Conséquence assumée : sur un serveur distant, le mot de passe d'administration, les cookies et les jetons de QR saisis depuis un smartphone circulent en clair (documenté dans le README).
+- Image Docker : le `Dockerfile` démarre par `scripts/docker-entrypoint.sh`, expose 8080 et 8443, déclare le volume `/certs` et vérifie la présence de `keytool` au build ; la GitHub Action est inchangée.
+- `docker-compose.yml` : ports `${APP_PORT:-8080}:8080` et `${APP_HTTPS_PORT:-8443}:8443`, volume `certs`, variables `ASSISTANT_HTTPS_*`, `ASSISTANT_HTTP_PUBLIC_PORT`.
+- `.github/copilot-instructions.md` et `docs/parcours-qrcode-smartphone.md` mis à jour pour les nouveaux profils. Version du `pom.xml` : 1.1.0.
+
+## [1.0.0] - 2026-10-30
+
+### Added
+- Clé de kiosque (`ASSISTANT_KIOSK_KEY`) : l'en-tête `X-Kiosk-Key` est exigé sur `POST /api/auth/login` et `POST /api/auth/heartbeat` (`@KioskOnly`, `KioskKeyInterceptor`, 403 sinon, comparaison en temps constant). Le démarrage échoue en profil `prod` si la clé est vide ; en profil `local` une clé vide désactive le contrôle avec un avertissement (`KioskStartupCheck`). Le navigateur du Pi la lit dans `?kiosk=` (`kiosk-key.js`), la conserve en `sessionStorage` et la retire de la barre d'adresse.
+- Nouvelles propriétés : `assistant.public-base-url`, `assistant.kiosk.*` (clé, cadence du poll), `assistant.enrollment.photos` et `assistant.enrollment.remote.*` (compte à rebours, intervalle, durée de vie, échecs consécutifs), `assistant.handoff.*` (durée des jetons et des sessions de smartphone), `assistant.qr.dev-mode` (vrai en profil `local`), avec leurs variables d'environnement et validations.
+- Tests JUnit 5 / Mockito (propriétés, intercepteur, accès login/heartbeat, démarrage) et test Node de la clé de kiosque.
+- Session de capture à distance (`/api/enrollment-sessions`) : une seule session en mémoire (`WAITING`→`COUNTDOWN`→`CAPTURING`→`REVIEW`→`DONE`/`CANCELLED`/`EXPIRED`), jetons d'appairage et de prise en main, premier smartphone gagnant, compte à rebours et captures pilotés par le serveur, abandon après N rejets consécutifs, validation avec choix de la miniature (création du profil et session du smartphone). `GET /api/kiosk/state` donne au Pi l'état des QR suivis et de la capture. Fonctionnel : le smartphone saisit le nom et lance la capture, la caméra du Pi prend les photos.
+- Jeton de transfert (`POST /api/session/handoff`, `GET /handoff?t=`) : QR à usage unique (256 bits, haché, 2 actifs au plus par profil et portée, plafond global) qui ouvre sur le smartphone une session transitoire `FULL` (30 min) ou `WEIGHT` (10 min), jamais prolongée. Les sessions portent une portée (`scope`) et une origine (`source`) ; la portée `WEIGHT` est limitée à `/api/weight/**` et `/api/auth/session` par liste blanche (403 sinon). Les jetons et sessions de capture sont révoqués à la suppression d'un profil, à la déconnexion ou bascule du Pi, à `invalidateAll` et après une restauration de sauvegarde.
+- `QrUrlResolver` : URL publique configurée en priorité ; en mode développement bascule `localhost` ⇄ `127.0.0.1` (cookies distincts pour simuler le smartphone) ; sinon QR désactivés avec un avertissement.
+- Côté Pi : bibliothèque QR (MIT) embarquée sous `/vendor/qrcode/`, module `qr-code.js`, panneau QR (invité, ou connecté avec régénération automatique), `kiosk.js` (poll, capture pilotée, reprise de la reconnaissance), `remote-capture.js` (consignes de pose, compte à rebours basé sur l'horloge serveur), calque de guidage plein écran. En mode développement le QR est cliquable (nouvel onglet) et son URL figure dans l'info-bulle. Les QR s'affichent seuls, sans légende ni URL en dessous.
+- Tests : services, contrôleurs MockMvc, concurrence des jetons, portée `WEIGHT`, résolveur d'URL, modules JS (`remote-capture`, `qr-code`).
+- Pages du smartphone (`MobileController`, ouvertes dans `AdminSecurityConfig`, `no-store` et `no-referrer`) : `/mobile` (menu selon l'état : invité avec `?s=`, session `FULL`, session `WEIGHT`, sans jeton ; le jeton d'appairage est gardé en `sessionStorage` puis retiré de l'URL), `/mobile/enroll` (nom, lancement, suivi n/N et rejets, choix de la miniature, validation, relance, annulation) et `/mobile/weight` (liste paginée, ajout pré-rempli au dernier relevé avec clavier décimal et validation identique au serveur, modification, suppression). Fonctionnel : tout se fait au téléphone, sans écran tactile sur le Pi.
+- `GET /api/enrollment-sessions/current` (en-tête `X-Pairing-Token`) : le QR invité ne contient que le jeton d'appairage, le smartphone retrouve ainsi l'identifiant de la session en attente. `GET /api/auth/session` renvoie aussi la portée (`scope`).
+- Widget poids : QR poids (jeton `WEIGHT` à usage unique, renouvelé dès qu'il est scanné ou 15 s avant expiration par `qr-ticket.js`) et message « Scannez pour saisir votre premier poids » quand il n'y a aucune mesure.
+- Recapture depuis le smartphone : « Refaire mes captures » dans `/mobile` (session `FULL`), sans nom, avec choix Ajouter ou Remplacer et choix du nouvel avatar ; le Pi ne l'accepte que si le profil connecté sur l'écran est celui de la recapture.
+- Configuration et administration sur smartphone : vue liste de `/configuration` sous 720 px (interrupteur « Afficher sur l'écran » et emplacement par application, réglages des widgets lisibles, sans glisser-déposer, `toggleWidget` dans `configuration-state.js`) ; `/admin/login`, `/admin` et `/admin/guest` en champs pleine largeur et cibles tactiles de 44 px.
+- Tests : MockMvc des pages mobiles et de la recherche par jeton d'appairage, tests Node de `mobile-menu`, `mobile-enroll-flow`, `weight-input`, `qr-ticket` et de la vue liste.
+
+### Changed
+- Déploiement : application servie en HTTP sur le LAN, port publié (`APP_PORT`, 8080 par défaut), cookie de session admin non `Secure` par défaut (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`, un cookie `Secure` est rejeté en HTTP), `server.forward-headers-strategy=none`. README mis à jour (Raspberry Pi en `localhost`, smartphones par adresse IP).
+- Enrôlement : une seule propriété `assistant.enrollment.photos` (8 par défaut) remplace le minimum et le maximum ; la création d'un profil exige exactement ce nombre de captures et la mise à jour des empreintes en accepte au plus ce nombre. `GET /api/config` expose `enrollmentPhotos` (à la place de `enrollmentMinPhotos` et `enrollmentMaxPhotos`).
+- Sessions : le heartbeat ne prolonge pas les sessions issues d'un transfert (durée fixe) ; `ProfileService.validateName`, `validateAvatar` et `MAX_AVATAR_LENGTH` deviennent publics pour la session de capture ; `GET /api/config` expose `kioskPollIdleMs`, `kioskPollActiveMs` et `qrDevMode` ; `docs/database.puml` : colonnes `scope` et `source` de `app_session`.
+- Widget poids : plus de retournement, d'historique court ni de formulaire sur le Pi ; il affiche le graphique et le QR poids. `WeightAssistantApp` décrit la saisie depuis le téléphone ; le widget reste réservé aux profils connectés.
+- Menu du profil sur le Pi : « Créer un profil » et « Refaire mes captures » disparaissent (remplacés par le QR).
+- `enrollment-policy.js` : `canChooseAvatar` et `canSaveEnrollment` exigent exactement N captures.
+- QR plus compacts : correction d'erreur L et marge d'un module (moins de modules, donc un QR lisible à taille réduite), taille d'affichage du QR du widget poids réglable par `ASSISTANT_QR_SIZE_REM` (6,5 par défaut, 2 à 30) exposée dans `GET /api/config` (`qrSizeRem`). Le QR menu du Pi est dans l'en-tête, à côté de la photo de profil, à la taille de l'icône webcam.
+- Version du projet portée à 1.0.0 (`pom.xml`) : rupture de configuration et de déploiement (voir Removed). Migration depuis la 0.x : renseigner `ASSISTANT_KIOSK_KEY` et `ASSISTANT_PUBLIC_BASE_URL`, retirer les variables supprimées, lancer le navigateur du Pi sur `http://localhost:8080/?kiosk=<clé>` ; les colonnes `scope` et `source` sont créées par Hibernate (sessions existantes : `FULL` et `FACE`).
+
+### Fixed
+- `POST /api/auth/login` n'est plus appelable par n'importe quel appareil du réseau avec un simple `profileId` : il exige la clé de kiosque (l'ancienne page `/enroll` qui en dépendait n'existe plus).
+
+### Removed
+- Caddy, `ASSISTANT_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`, les volumes Caddy et le Caddyfile du `docker-compose.yml`.
+- Route `/root.crt` (`RootCertificateController`), page d'aide `/certificat`, lien « Certificat HTTPS » du menu et variable `ASSISTANT_CERTIFICATE_ROOT_PATH`.
+- Variables `ASSISTANT_ENROLLMENT_MIN_PHOTOS` et `ASSISTANT_ENROLLMENT_MAX_PHOTOS`.
+- Ancien enrôlement sur le Pi : page `/enroll` (`enroll.html`, `enrollment.js`, `enrollment.css`) et son entrée dans `AdminSecurityConfig`.
+
 ## [0.0.13]
 
 ### Changed

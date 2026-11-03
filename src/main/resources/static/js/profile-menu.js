@@ -40,14 +40,10 @@ export function createProfileMenu() {
         ? `Menu du profil ${profile.name}`
         : 'Menu du profil');
       const menuConfiguration = document.getElementById('menu-configuration');
-      const recapture = document.getElementById('recapture-profile');
       const logout = document.getElementById('logout');
-      const createProfile = document.getElementById('create-profile');
       const unrecognizedHelp = document.getElementById('unrecognized-help');
       if (menuConfiguration) menuConfiguration.hidden = !profile;
-      if (recapture) recapture.hidden = !profile;
       if (logout) logout.hidden = !profile;
-      if (createProfile) createProfile.hidden = Boolean(profile);
       if (unrecognizedHelp) unrecognizedHelp.hidden = Boolean(profile);
     },
   };

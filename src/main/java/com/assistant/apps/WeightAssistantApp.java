@@ -17,7 +17,7 @@ public class WeightAssistantApp implements AssistantApp {
 
     @Override
     public String description() {
-        return "Saisissez et consultez votre historique de poids.";
+        return "Consultez l'évolution de votre poids et saisissez-le depuis votre téléphone.";
     }
 
     @Override

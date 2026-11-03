@@ -28,7 +28,17 @@ class MockPassageGatewayTest {
         assertThat(feed.passages()).hasSize(MockPassageGateway.VISITS);
         assertThat(feed.passages()).extracting(Passage::expectedAt).allMatch(time -> time.isAfter(now))
                 .isSorted();
-        assertThat(feed.passages()).extracting(Passage::lineId).containsOnly("C01154");
+        assertThat(feed.passages()).extracting(Passage::lineId).containsOnly("C01154", "C01193", "C01083", "C01742");
+    }
+
+    @Test
+    void givesAtLeastThreeFuturePassagesToEachOfFourLines() {
+        PassageFeed feed = gateway(7).fetch("24377");
+
+        var perLine = feed.passages().stream()
+                .collect(java.util.stream.Collectors.groupingBy(Passage::lineId, java.util.stream.Collectors.counting()));
+        assertThat(perLine).hasSize(4);
+        assertThat(perLine.values()).allMatch(count -> count >= NextPassagesService.PASSAGES_PER_LINE);
     }
 
     @Test

@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="assistant-version" th:content="${appVersion}">
     <title>Assistant</title>
     <link rel="stylesheet" th:href="@{/css/theme.css}">
     <link rel="stylesheet" th:href="@{/css/home.css}">
@@ -17,6 +18,14 @@
     <section class="widget-slot slot-right-bottom" data-slot-index="4" aria-label="Emplacement en bas à droite"></section>
 </main>
 <pre id="debug" hidden></pre>
+<p id="app-version" class="app-version" th:text="${appVersion}"></p>
+<section id="capture-overlay" class="capture-overlay" aria-live="polite" hidden>
+    <p id="capture-title" class="capture-title"></p>
+    <p id="capture-count" class="capture-count"></p>
+    <p id="capture-hint" class="capture-hint"></p>
+    <p id="capture-progress" class="capture-progress"></p>
+    <p id="capture-message" class="capture-message"></p>
+</section>
 <script type="module" th:src="@{/js/home.js}"></script>
 </body>
 </html>

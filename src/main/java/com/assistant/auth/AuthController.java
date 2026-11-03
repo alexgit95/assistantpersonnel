@@ -1,7 +1,11 @@
 package com.assistant.auth;
 
 import com.assistant.common.ApiException;
+import com.assistant.kiosk.KioskKeyInterceptor;
+import com.assistant.kiosk.KioskOnly;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -36,9 +40,13 @@ public class AuthController {
                     + "Une session existante de l'appareil est remplacee (bascule de profil).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Session ouverte"),
+            @ApiResponse(responseCode = "403", description = "Cle de kiosque absente ou invalide", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class))),
             @ApiResponse(responseCode = "400", description = "Requete invalide", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Profil introuvable", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class))),
             @ApiResponse(responseCode = "500", description = "Erreur interne", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class)))})
+    @KioskOnly
+    @Parameter(name = KioskKeyInterceptor.HEADER, in = ParameterIn.HEADER,
+            description = "Cle de kiosque (appel reserve au navigateur du Pi)")
     @PostMapping("/login")
     public SessionResponse login(@Valid @RequestBody LoginRequest body, HttpServletRequest request,
                                  HttpServletResponse response) {
@@ -51,8 +59,12 @@ public class AuthController {
             description = "A appeler quand le visage du profil connecte est revu ; repousse l'expiration de la duree configuree.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Session prolongee"),
+            @ApiResponse(responseCode = "403", description = "Cle de kiosque absente ou invalide", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Session absente ou expiree", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class))),
             @ApiResponse(responseCode = "500", description = "Erreur interne", content = @Content(schema = @Schema(implementation = org.springframework.http.ProblemDetail.class)))})
+    @KioskOnly
+    @Parameter(name = KioskKeyInterceptor.HEADER, in = ParameterIn.HEADER,
+            description = "Cle de kiosque (appel reserve au navigateur du Pi)")
     @PostMapping("/heartbeat")
     public SessionResponse heartbeat(HttpServletRequest request, HttpServletResponse response) {
         SessionService.IssuedSession issued = sessionService.heartbeat(SessionCookies.read(request))
@@ -70,7 +82,7 @@ public class AuthController {
     public SessionResponse current(AuthenticatedSession session, HttpServletRequest request) {
         String name = sessionService.profileName(session.profileId());
         return new SessionResponse(session.profileId(), name, session.expiresAtMs(),
-                sessionService.remainingSeconds(session.expiresAtMs()));
+                sessionService.remainingSeconds(session.expiresAtMs()), session.scope().name());
     }
 
     @Operation(summary = "Deconnexion", description = "Supprime la session cote serveur et le cookie ; idempotent.")
@@ -89,12 +101,13 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE,
                 SessionCookies.build(request, issued.token(), sessionService.durationSeconds()));
         return new SessionResponse(issued.profileId(), issued.profileName(), issued.expiresAtMs(),
-                sessionService.remainingSeconds(issued.expiresAtMs()));
+                sessionService.remainingSeconds(issued.expiresAtMs()), SessionScope.FULL.name());
     }
 
     public record LoginRequest(@NotNull Long profileId) {
     }
 
-    public record SessionResponse(long profileId, String profileName, long expiresAtMs, long remainingSeconds) {
+    public record SessionResponse(long profileId, String profileName, long expiresAtMs, long remainingSeconds,
+                                  String scope) {
     }
 }

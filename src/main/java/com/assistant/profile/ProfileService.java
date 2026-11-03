@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProfileService {
 
     static final int MAX_EMBEDDINGS_PER_PROFILE = 40;
-    static final int MAX_AVATAR_LENGTH = 100_000;
+    public static final int MAX_AVATAR_LENGTH = 100_000;
     private static final int PAGE_SIZE = 200;
     private static final long NO_PROFILE = -1L;
     private static final Pattern NAME = Pattern.compile("^[\\p{L}\\p{N} '.\\-]{1,60}$");
@@ -63,9 +63,9 @@ public class ProfileService {
         String cleanName = validateName(name);
         String cleanAvatar = validateAvatar(avatar);
         AssistantProperties.Enrollment enrollment = properties.enrollment();
-        if (embeddings.size() < enrollment.minPhotos() || embeddings.size() > enrollment.maxPhotos()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Entre " + enrollment.minPhotos() + " et "
-                    + enrollment.maxPhotos() + " captures sont necessaires.");
+        if (embeddings.size() != enrollment.photos()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Exactement " + enrollment.photos()
+                    + " captures sont necessaires.");
         }
         if (enrollment.maxProfiles() > 0 && profiles.countWithoutGuest() >= enrollment.maxProfiles()) {
             throw new ApiException(HttpStatus.CONFLICT, "Le nombre maximal de profils est atteint.");
@@ -81,7 +81,7 @@ public class ProfileService {
     @Transactional
     public ProfileView updateEmbeddings(long profileId, List<float[]> embeddings, boolean replace, String avatar) {
         String cleanAvatar = validateAvatar(avatar);
-        int max = properties.enrollment().maxPhotos();
+        int max = properties.enrollment().photos();
         if (embeddings.isEmpty() || embeddings.size() > max) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Entre 1 et " + max + " captures sont necessaires.");
         }
@@ -154,7 +154,7 @@ public class ProfileService {
         return new ApiException(HttpStatus.NOT_FOUND, "Profil introuvable.");
     }
 
-    static String validateName(String name) {
+    public static String validateName(String name) {
         String trimmed = name == null ? "" : name.trim();
         if (!NAME.matcher(trimmed).matches()) {
             throw new ApiException(HttpStatus.BAD_REQUEST,
@@ -163,7 +163,7 @@ public class ProfileService {
         return trimmed;
     }
 
-    static String validateAvatar(String avatar) {
+    public static String validateAvatar(String avatar) {
         if (avatar == null || avatar.isBlank()) {
             return null;
         }

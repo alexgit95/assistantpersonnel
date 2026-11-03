@@ -1,6 +1,7 @@
 package com.assistant.admin;
 
 import com.assistant.auth.AppSession;
+import com.assistant.auth.SessionsInvalidatedEvent;
 import com.assistant.proxy.ProxySetting;
 import com.assistant.quota.ExternalApiQuota;
 import com.assistant.integrations.ExternalApiMode;
@@ -33,6 +34,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -63,10 +65,12 @@ public class BackupService {
     private final TransactionTemplate readTransaction;
     private final TransactionTemplate writeTransaction;
     private final TokenStreamFactory tokenStreamFactory;
+    private final ApplicationEventPublisher events;
 
     public BackupService(EntityManager entityManager, JdbcTemplate jdbc, ObjectMapper objectMapper,
                          AssistantProperties properties, Clock clock,
-                         PlatformTransactionManager transactionManager) {
+                         PlatformTransactionManager transactionManager, ApplicationEventPublisher events) {
+        this.events = events;
         this.entityManager = entityManager;
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
@@ -117,6 +121,7 @@ public class BackupService {
             throw new BackupException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "La restauration a échoué ; les données précédentes ont été conservées.");
         }
+        events.publishEvent(new SessionsInvalidatedEvent());
     }
 
     private void writeExport(OutputStream output) throws IOException {
