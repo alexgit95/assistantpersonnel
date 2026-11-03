@@ -63,7 +63,7 @@ class NextPassagesServiceTest {
     }
 
     @Test
-    void returnsTheSixNextFuturePassagesInMinutesWithTheUpdateTimeForASingleStop() {
+    void returnsTheThreeNextFuturePassagesOfALineInMinutesWithTheUpdateTimeForASingleStop() {
         Instant now = clock.instant();
         when(liveGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
                 passage("C01154", now.minusSeconds(30)), passage("C01154", now.plusSeconds(5 * 60 + 20)),
@@ -78,38 +78,99 @@ class NextPassagesServiceTest {
         var stop = overview.stops().getFirst();
         assertThat(stop.state()).isEqualTo(NextPassagesService.STATE_OK);
         assertThat(stop.updatedAt()).isEqualTo(now.minusSeconds(40));
+        assertThat(overview.updatedAt()).isEqualTo(now.minusSeconds(40));
         assertThat(stop.passages()).extracting(NextPassagesService.PassageView::minutes)
-                .containsExactly(5, 9, 15, 21, 33, 40);
+                .containsExactly(5, 9, 15);
     }
 
     @Test
-    void returnsSixPassagesPerStopWithTwoStopsAndFourWithThree() {
+    void groupsPassagesByLineWithoutInterleavingAndSortsBlocksByTheirFirstPassage() {
         Instant now = clock.instant();
-        var feed = new PassageFeed(IntStream.rangeClosed(1, 8)
-                .mapToObj(index -> passage("C01154", now.plusSeconds(index * 60L))).toList(), now);
-        when(liveGateway.fetch(anyString())).thenReturn(feed);
+        when(liveGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
+                passage("C01193", now.plusSeconds(5 * 60)), passage("C01154", now.plusSeconds(7 * 60)),
+                passage("C01193", now.plusSeconds(9 * 60)), passage("C01154", now.plusSeconds(11 * 60)),
+                passage("C01193", now.plusSeconds(13 * 60)), passage("C01154", now.plusSeconds(15 * 60)),
+                passage("C01193", now.plusSeconds(20 * 60))), now));
 
-        useConfig(stopsConfig(2));
-        assertThat(service.next(1L).stops()).allSatisfy(stop -> assertThat(stop.passages()).hasSize(6));
+        var passages = service.next(1L).stops().getFirst().passages();
 
-        useConfig(stopsConfig(3));
-        assertThat(service.next(1L).stops()).allSatisfy(stop -> assertThat(stop.passages()).hasSize(4));
+        assertThat(passages).extracting(NextPassagesService.PassageView::line)
+                .containsExactly("172", "172", "172", "125", "125", "125");
+        assertThat(passages).extracting(NextPassagesService.PassageView::minutes)
+                .containsExactly(5, 9, 13, 7, 11, 15);
     }
 
     @Test
-    void countsAnUnavailableStopWhenChoosingThePassageLimit() {
+    void doesNotHideARareLineBehindAFrequentOne() {
         Instant now = clock.instant();
-        var feed = new PassageFeed(IntStream.rangeClosed(1, 8)
-                .mapToObj(index -> passage("C01154", now.plusSeconds(index * 60L))).toList(), now);
-        when(liveGateway.fetch(anyString())).thenReturn(feed);
+        var frequent = IntStream.rangeClosed(1, 6).mapToObj(index -> passage("C01154", now.plusSeconds(index * 60L)));
+        when(liveGateway.fetch("24377")).thenReturn(new PassageFeed(java.util.stream.Stream.concat(frequent,
+                java.util.stream.Stream.of(passage("C01193", now.plusSeconds(20 * 60)))).toList(), now));
+
+        var passages = service.next(1L).stops().getFirst().passages();
+
+        assertThat(passages).extracting(NextPassagesService.PassageView::line)
+                .containsExactly("125", "125", "125", "172");
+        assertThat(passages.getLast().minutes()).isEqualTo(20);
+    }
+
+    @Test
+    void showsALineWithFewerThanThreePassagesWithoutPadding() {
+        Instant now = clock.instant();
+        when(liveGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
+                passage("C01154", now.plusSeconds(5 * 60)), passage("C01193", now.plusSeconds(6 * 60)),
+                passage("C01154", now.plusSeconds(9 * 60))), now));
+
+        var passages = service.next(1L).stops().getFirst().passages();
+
+        assertThat(passages).extracting(NextPassagesService.PassageView::line).containsExactly("125", "125", "172");
+    }
+
+    @Test
+    void limitsTheLinesPerStopToFourWithOneStopTwoWithTwoAndOneWithThree() {
+        Instant now = clock.instant();
+        when(liveGateway.fetch(anyString())).thenReturn(multiLineFeed(now, 5, 4));
+
+        for (int[] expected : new int[][] {{1, 4}, {2, 2}, {3, 1}}) {
+            useConfig(stopsConfig(expected[0]));
+            assertThat(service.next(1L).stops()).hasSize(expected[0]).allSatisfy(stop -> {
+                assertThat(stop.passages()).hasSize(expected[1] * NextPassagesService.PASSAGES_PER_LINE);
+                assertThat(stop.passages().stream().map(NextPassagesService.PassageView::line).distinct().count())
+                        .isEqualTo(expected[1]);
+            });
+        }
+    }
+
+    @Test
+    void countsAnUnavailableStopWhenChoosingTheLineLimit() {
+        Instant now = clock.instant();
+        when(liveGateway.fetch(anyString())).thenReturn(multiLineFeed(now, 5, 4));
         when(liveGateway.fetch("2")).thenThrow(new PassageUnavailableException(true, null));
         useConfig(stopsConfig(3));
 
         var stops = service.next(1L).stops();
 
         assertThat(stops.get(1).state()).isEqualTo(NextPassagesService.STATE_UNKNOWN_STOP);
-        assertThat(stops.get(0).passages()).hasSize(4);
-        assertThat(stops.get(2).passages()).hasSize(4);
+        assertThat(stops.get(0).passages()).hasSize(NextPassagesService.PASSAGES_PER_LINE);
+        assertThat(stops.get(2).passages()).hasSize(NextPassagesService.PASSAGES_PER_LINE);
+    }
+
+    @Test
+    void usesTheOldestUpdateTimeOfTheStopsThatHaveDataAndNullWithoutData() {
+        Instant now = clock.instant();
+        when(liveGateway.fetch("1")).thenReturn(new PassageFeed(
+                List.of(passage("C01154", now.plusSeconds(300))), now.minusSeconds(40)));
+        when(liveGateway.fetch("2")).thenReturn(new PassageFeed(
+                List.of(passage("C01154", now.plusSeconds(300))), now.minusSeconds(100)));
+        useConfig(stopsConfig(2));
+
+        assertThat(service.next(1L).updatedAt()).isEqualTo(now.minusSeconds(100));
+
+        when(primKey.isConfigured()).thenReturn(false);
+        useConfig(stopsConfig(1));
+        var empty = new NextPassagesService(liveGateway, testGateway, search, catalog, profileApps,
+                new ObjectMapper(), properties(), primKey, quota, quietHours, mode, clock);
+        assertThat(empty.next(1L).updatedAt()).isNull();
     }
 
     @Test
@@ -204,32 +265,32 @@ class NextPassagesServiceTest {
         when(mode.isTestMode()).thenReturn(true);
         when(primKey.isConfigured()).thenReturn(false);
         Instant now = clock.instant();
-        when(testGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
-                passage("C01154", now.plusSeconds(60)), passage("C01154", now.plusSeconds(300)),
-                passage("C01154", now.plusSeconds(600)), passage("C01154", now.plusSeconds(900)),
-                passage("C01154", now.plusSeconds(1200)), passage("C01154", now.plusSeconds(1500)),
-                passage("C01154", now.plusSeconds(1800))), now));
+        when(testGateway.fetch("24377")).thenReturn(multiLineFeed(now, 4, 3));
 
         var first = service.next(1L);
         service.next(1L);
 
         assertThat(first.testMode()).isTrue();
-        assertThat(first.stops().getFirst().passages()).hasSize(6);
+        assertThat(first.stops().getFirst().passages()).hasSize(12);
         verify(testGateway, times(1)).fetch("24377");
         verifyNoInteractions(liveGateway, quota);
     }
 
     @Test
-    void enrichesPassagesWithTheLineLabelWhenTheCatalogKnowsIt() {
+    void showsTheShortLineIdentifierOfTheCatalogAndFallsBackToTheLineId() {
         when(liveGateway.fetch("24377")).thenReturn(new PassageFeed(List.of(
-                passage("C01739", clock.instant().plusSeconds(120)),
+                passage("C01154", clock.instant().plusSeconds(60)),
+                passage("C01742", clock.instant().plusSeconds(120)),
+                passage("C01739", clock.instant().plusSeconds(180)),
                 passage("INCONNUE", clock.instant().plusSeconds(240))), clock.instant()));
 
         var passages = service.next(1L).stops().getFirst().passages();
 
-        assertThat(passages.getFirst().line()).isEqualTo(catalog.find("C01739").orElseThrow().label());
-        assertThat(passages.get(1).line()).isEqualTo("INCONNUE");
-        assertThat(passages.get(1).lineColor()).isNull();
+        assertThat(passages.get(0).line()).isEqualTo("125");
+        assertThat(passages.get(1).line()).isEqualTo("A");
+        assertThat(passages.get(2).line()).isEqualTo(catalog.find("C01739").orElseThrow().shortName());
+        assertThat(passages.get(3).line()).isEqualTo("INCONNUE");
+        assertThat(passages.get(3).lineColor()).isNull();
     }
 
     @Test
@@ -308,6 +369,13 @@ class NextPassagesServiceTest {
 
     private static Passage passage(String lineId, Instant at) {
         return new Passage(lineId, "Porte d'Orléans", at, "onTime");
+    }
+
+    /** Les lignes se succèdent une minute après l'autre : lines × perLine passages entremêlés. */
+    private static PassageFeed multiLineFeed(Instant now, int lines, int perLine) {
+        String[] ids = {"C01154", "C01193", "C01083", "C01742", "C01739"};
+        return new PassageFeed(IntStream.range(0, lines * perLine)
+                .mapToObj(index -> passage(ids[index % lines], now.plusSeconds((index + 1) * 60L))).toList(), now);
     }
 
     private static AssistantProperties properties() {

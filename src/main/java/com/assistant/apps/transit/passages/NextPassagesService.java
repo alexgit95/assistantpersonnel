@@ -34,9 +34,10 @@ public class NextPassagesService {
     static final String APP_KEY = "transit-passages";
     static final String QUOTA_KEY = "prim";
     static final int MAX_STOPS = 3;
-    static final int PASSAGES_FEW_STOPS = 6;
-    static final int PASSAGES_MANY_STOPS = 4;
-    static final int FEW_STOPS_MAX = 2;
+    static final int PASSAGES_PER_LINE = 3;
+    static final int LINES_ONE_STOP = 4;
+    static final int LINES_TWO_STOPS = 2;
+    static final int LINES_THREE_STOPS = 1;
     // Un poll à 60 s pile arrive juste avant l'échéance du cache : sans marge il serait servi périmé d'une minute.
     static final Duration CACHE_TTL = Duration.ofSeconds(55);
     private static final int MAX_CACHE = 100;
@@ -138,10 +139,10 @@ public class NextPassagesService {
         ProfileAppService.EnabledApp app = profileApps.requireEnabled(profileId, APP_KEY);
         List<TransitStop> stops = readStops(app.configJson());
         Instant now = clock.instant();
-        int perStop = passagesPerStop(stops.size());
+        int maxLines = linesPerStop(stops.size());
         if (mode.isTestMode()) {
-            return new Overview(true, "MODE TEST · données simulées",
-                    stops.stream().map(stop -> view(stop, testEntry(stop, now, perStop), now, perStop)).toList());
+            return overview(true, "MODE TEST · données simulées",
+                    stops.stream().map(stop -> view(stop, testEntry(stop, now, maxLines), now, maxLines)).toList());
         }
         String notice = null;
         boolean canCall = true;
@@ -159,20 +160,44 @@ public class NextPassagesService {
             if (canCall && (entry == null || stale(entry, now))) {
                 entry = refresh(stop, refreshNotice);
             }
-            views.add(view(stop, entry, now, perStop));
+            views.add(view(stop, entry, now, maxLines));
         }
-        return new Overview(false, notice != null ? notice : refreshNotice.get(), views);
+        return overview(false, notice != null ? notice : refreshNotice.get(), views);
     }
 
-    static int passagesPerStop(int stopCount) {
-        return stopCount <= FEW_STOPS_MAX ? PASSAGES_FEW_STOPS : PASSAGES_MANY_STOPS;
+    static int linesPerStop(int stopCount) {
+        if (stopCount <= 1) {
+            return LINES_ONE_STOP;
+        }
+        return stopCount == 2 ? LINES_TWO_STOPS : LINES_THREE_STOPS;
     }
 
-    private CacheEntry testEntry(TransitStop stop, Instant now, int perStop) {
+    /** La plus ancienne heure de mise à jour des arrêts qui ont des données : elle ne promet pas plus de fraîcheur qu'il n'y en a. */
+    private static Overview overview(boolean testMode, String notice, List<StopPassages> stops) {
+        Instant oldest = stops.stream().map(StopPassages::updatedAt).filter(java.util.Objects::nonNull)
+                .min(java.util.Comparator.naturalOrder()).orElse(null);
+        return new Overview(testMode, notice, stops, oldest);
+    }
+
+    /** Les 3 prochains passages de chaque ligne, par blocs de ligne dans l'ordre de leur premier passage, limités à maxLines lignes. */
+    static List<Passage> selectPassages(PassageFeed feed, Instant now, int maxLines) {
+        Map<String, List<Passage>> byLine = new LinkedHashMap<>();
+        for (Passage passage : futurePassages(feed, now)) {
+            List<Passage> group = byLine.computeIfAbsent(passage.lineId() == null ? "" : passage.lineId(),
+                    key -> new ArrayList<>());
+            if (group.size() < PASSAGES_PER_LINE) {
+                group.add(passage);
+            }
+        }
+        return byLine.values().stream().limit(maxLines).flatMap(List::stream).toList();
+    }
+
+    private CacheEntry testEntry(TransitStop stop, Instant now, int maxLines) {
         String key = "test:" + stop.arrid();
         CacheEntry entry = cache.get(key);
-        // Les horaires simulés sont conservés tant qu'il reste de quoi remplir l'affichage.
-        if (entry == null || entry.feed() == null || futurePassages(entry.feed(), now).size() < perStop) {
+        // Les horaires simulés sont conservés tant qu'ils suffisent à remplir toutes les lignes affichées.
+        if (entry == null || entry.feed() == null
+                || selectPassages(entry.feed(), now, maxLines).size() < maxLines * PASSAGES_PER_LINE) {
             entry = new CacheEntry(now, testGateway.fetch(stop.arrid()), false);
             cache.put(key, entry);
         }
@@ -208,14 +233,14 @@ public class NextPassagesService {
         return Duration.between(entry.attemptedAt(), now).compareTo(CACHE_TTL) >= 0;
     }
 
-    private StopPassages view(TransitStop stop, CacheEntry entry, Instant now, int perStop) {
+    private StopPassages view(TransitStop stop, CacheEntry entry, Instant now, int maxLines) {
         if (entry != null && entry.unknownStop()) {
             return new StopPassages(stop, STATE_UNKNOWN_STOP, "Arrêt indisponible", null, List.of());
         }
         if (entry == null || entry.feed() == null) {
             return new StopPassages(stop, STATE_NO_DATA, "Données indisponibles", null, List.of());
         }
-        List<PassageView> passages = futurePassages(entry.feed(), now).stream().limit(perStop)
+        List<PassageView> passages = selectPassages(entry.feed(), now, maxLines).stream()
                 .map(passage -> toView(passage, now)).toList();
         if (passages.isEmpty()) {
             return new StopPassages(stop, STATE_NO_PASSAGE, "Aucun passage prévu", entry.feed().updatedAt(), passages);
@@ -229,7 +254,8 @@ public class NextPassagesService {
 
     private PassageView toView(Passage passage, Instant now) {
         TransitLine line = passage.lineId() == null ? null : catalog.find(passage.lineId()).orElse(null);
-        String label = line != null ? line.label() : passage.lineId() == null ? "" : passage.lineId();
+        // Pastille : lettre du train ou numéro du bus, sans préfixe de mode ni de réseau.
+        String label = line != null ? line.shortName() : passage.lineId() == null ? "" : passage.lineId();
         String color = line != null && line.lineColor() != null && line.lineColor().matches("(?i)[0-9a-f]{6}")
                 ? line.lineColor() : null;
         return new PassageView(label, color, passage.destination() == null ? "" : passage.destination(),
@@ -289,7 +315,7 @@ public class NextPassagesService {
     private record CacheEntry(Instant attemptedAt, PassageFeed feed, boolean unknownStop) {
     }
 
-    public record Overview(boolean testMode, String notice, List<StopPassages> stops) {
+    public record Overview(boolean testMode, String notice, List<StopPassages> stops, Instant updatedAt) {
     }
 
     public record StopPassages(TransitStop stop, String state, String message, Instant updatedAt,

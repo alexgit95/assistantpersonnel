@@ -11,9 +11,8 @@ export function formatPassagesUpdatedAt(value) {
   if (!value) return '';
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) return '';
-  return `Mis à jour le ${new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+  return `Mis à jour ${new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit',
   }).format(instant)}`;
 }
 
@@ -54,12 +53,6 @@ function createStopEntry(entry) {
     }
     item.append(list);
   }
-  if (entry.updatedAt) {
-    const updated = document.createElement('p');
-    updated.className = 'passages-updated';
-    updated.textContent = formatPassagesUpdatedAt(entry.updatedAt);
-    item.append(updated);
-  }
   return item;
 }
 
@@ -68,6 +61,7 @@ export async function initialize(container, _configJson, _typingOptions = {}, de
   if (!root) return;
   const status = root.querySelector('[data-passages-status]');
   const stops = root.querySelector('[data-passages-stops]');
+  const updated = root.querySelector('[data-passages-updated]');
   const testBadge = root.querySelector('[data-external-test-mode]');
   if (testBadge) testBadge.hidden = root.dataset.testMode !== 'true';
   const setPoll = dependencies.setInterval ?? ((callback, delay) => window.setInterval(callback, delay));
@@ -85,6 +79,11 @@ export async function initialize(container, _configJson, _typingOptions = {}, de
   const render = (overview) => {
     if (testBadge) testBadge.hidden = !overview.testMode;
     stops.replaceChildren(...overview.stops.map(createStopEntry));
+    if (updated) {
+      const text = formatPassagesUpdatedAt(overview.updatedAt);
+      updated.textContent = text;
+      updated.hidden = !text;
+    }
     const notice = overview.notice
       || (overview.stops.length === 0 ? 'Aucun arrêt sélectionné : choisissez-en dans la configuration.' : '');
     status.hidden = !notice;

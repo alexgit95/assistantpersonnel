@@ -5,7 +5,14 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [1.1.1]
 
 ### Added
+- Widget « Prochains passages » : les passages d'un arrêt sont regroupés par ligne. Les 3 prochains passages d'une ligne s'affichent à la suite, puis ceux de la ligne suivante, sans jamais entremêlés ; les blocs sont triés par leur premier passage. Technique : `NextPassagesService.selectPassages` regroupe par `lineId` avant tout plafond, ce qui empêche une ligne fréquente de masquer une ligne rare. La réponse de `GET /api/transit-passages/next` gagne un champ `updatedAt` (la plus ancienne heure de mise à jour des arrêts ayant des données).
+- Mode TEST des prochains passages : le fichier `docs/reponse-prochain-passage.json` couvre désormais quatre lignes (bus 125, 172, 38 et RER A) et `MockPassageGateway` en rejoue 12 passages (3 par ligne).
+- Tests : regroupement, tri des blocs, ligne rare non masquée, ligne à moins de 3 passages, plafonds de lignes, heure unique (`NextPassagesServiceTest`, `MockPassageGatewayTest`, `TransitPassagesControllerTest`, `transit-passages-widget.test.mjs`).
 - Écran d'accueil : quand le serveur refuse (403) les appels réservés au kiosque, un message rouge à la place du QR indique pourquoi (« clé de kiosque absente » ou « clé de kiosque refusée »), au lieu d'un QR simplement absent. Technique : `kiosk.js` intercepte le 403 de `/api/kiosk/state`, masque le QR et affiche `#kiosk-key-error` ; le message disparaît dès que l'état est de nouveau lu. Texte choisi par `kioskKeyProblem` (`kiosk-key.js`), test dans `kiosk-key.test.mjs`.
+
+### Changed
+- Widget « Prochains passages » : le plafond de 6 passages (1 ou 2 arrêts) ou 4 (3 arrêts) par arrêt est remplacé par un plafond de lignes par arrêt, chacune avec ses 3 prochains passages : 4 lignes avec 1 arrêt, 2 avec 2 arrêts, 1 avec 3 arrêts (un arrêt indisponible compte). Fonctionnel : l'affichage est plus lisible et son volume borné, le kiosque n'ayant ni souris ni clavier pour défiler.
+- Widget « Prochains passages » : chaque rangée affiche la ligne (la lettre du train ou le numéro du bus, sans « Bus » ni nom de réseau), la destination et le temps restant ; une seule heure « Mis à jour HH:MM » (Europe/Paris, sans date) remplace l'heure par arrêt ; l'espacement vertical entre les rangées est augmenté. Technique : `PassageView.line` utilise `TransitLine.shortName` (repli sur l'identifiant de ligne) ; le widget Transports garde son libellé complet.
 
 ## [1.1.0] - 2026-11-02
 

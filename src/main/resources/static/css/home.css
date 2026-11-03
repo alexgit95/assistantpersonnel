@@ -1496,8 +1496,13 @@ button {
 }
 
 .passages-stops {
-  gap: var(--assistant-space-2);
+  gap: var(--assistant-space-3);
   overflow: auto;
+}
+
+.passages-list {
+  gap: var(--assistant-space-2);
+  padding-top: var(--assistant-space-1);
 }
 
 .passages-stop {
@@ -1521,6 +1526,14 @@ button {
 
 .passages-updated {
   font-variant-numeric: tabular-nums;
+}
+
+.passages-widget > .passages-updated {
+  margin-top: var(--assistant-space-1);
+}
+
+.passages-updated[hidden] {
+  display: none;
 }
 
 .passage {

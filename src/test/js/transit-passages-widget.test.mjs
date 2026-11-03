@@ -44,38 +44,41 @@ function setup(testMode = 'false') {
   const status = new FakeElement();
   const stops = new FakeElement();
   const badge = new FakeElement();
+  const updated = new FakeElement();
   root.elements.set('[data-passages-status]', status);
   root.elements.set('[data-passages-stops]', stops);
+  root.elements.set('[data-passages-updated]', updated);
   root.elements.set('[data-external-test-mode]', badge);
   const container = { querySelector: (selector) => (selector === '[data-passages-widget]' ? root : null) };
-  return { root, status, stops, badge, container };
+  return { root, status, stops, badge, updated, container };
 }
 
 const OVERVIEW = {
   testMode: false,
   notice: null,
+  updatedAt: '2026-10-30T08:12:30Z',
   stops: [{
     stop: { arrid: '24377', name: 'Carnot', town: 'Paris', type: 'bus' },
     state: 'OK',
     message: null,
     updatedAt: '2026-10-30T08:12:30Z',
     passages: [
-      { line: 'Bus 172', lineColor: '00aa00', destination: "Porte d'Orléans", minutes: 5 },
-      { line: 'Bus 172', lineColor: 'zz', destination: 'Gare', minutes: 0 },
+      { line: '172', lineColor: '00aa00', destination: "Porte d'Orléans", minutes: 5 },
+      { line: '172', lineColor: 'zz', destination: 'Gare', minutes: 0 },
     ],
   }],
 };
 
-test('formats minutes remaining and the Paris update time', () => {
+test('formats minutes remaining and the Paris update time without date', () => {
   assert.equal(formatMinutes(5), 'dans 5 min');
   assert.equal(formatMinutes(0), "À l'approche");
-  assert.equal(formatPassagesUpdatedAt('2026-10-30T08:12:30Z'), 'Mis à jour le 30/10/2026 09:12');
+  assert.equal(formatPassagesUpdatedAt('2026-10-30T08:12:30Z'), 'Mis à jour 09:12');
   assert.equal(formatPassagesUpdatedAt(null), '');
   assert.equal(formatPassagesUpdatedAt('invalid'), '');
 });
 
-test('renders stops with minutes, line colour and update time, then polls every minute', async () => {
-  const { status, stops, badge, container } = setup();
+test('renders stops with minutes and line colour, one update time, then polls every minute', async () => {
+  const { status, stops, badge, updated, container } = setup();
   const polls = [];
   await initialize(container, '{}', {}, {
     api: { transitPassages: async () => OVERVIEW },
@@ -88,12 +91,48 @@ test('renders stops with minutes, line colour and update time, then polls every 
   assert.equal(badge.hidden, true);
   const stop = stops.children[0];
   assert.equal(stop.children[0].textContent, 'Carnot · Paris');
+  assert.equal(stop.children.length, 2);
   const rows = stop.children[1].children;
   assert.equal(rows[0].children[2].textContent, 'dans 5 min');
   assert.equal(rows[0].children[0].style.props['--line-color'], '#00aa00');
   assert.equal(rows[1].children[0].style.props['--line-color'], undefined);
   assert.equal(rows[1].children[2].textContent, "À l'approche");
-  assert.equal(stop.children[2].textContent, 'Mis à jour le 30/10/2026 09:12');
+  assert.equal(updated.hidden, false);
+  assert.equal(updated.textContent, 'Mis à jour 09:12');
+});
+
+test('keeps the received order of the line blocks and repeats the line on every row', async () => {
+  const { stops, container } = setup();
+  const blocks = [
+    { line: '172', destination: 'Porte', minutes: 5 }, { line: '172', destination: 'Porte', minutes: 9 },
+    { line: '172', destination: 'Gare', minutes: 13 }, { line: 'A', destination: 'Chessy', minutes: 7 },
+    { line: 'A', destination: 'Chessy', minutes: 15 },
+  ];
+  await initialize(container, '{}', {}, {
+    api: {
+      transitPassages: async () => ({
+        ...OVERVIEW,
+        stops: [{ ...OVERVIEW.stops[0], passages: blocks }],
+      }),
+    },
+    setInterval: () => 1,
+  });
+
+  const rows = stops.children[0].children[1].children;
+  assert.deepEqual(rows.map((row) => row.children[0].textContent), ['172', '172', '172', 'A', 'A']);
+  assert.deepEqual(rows.map((row) => row.children[2].textContent),
+    ['dans 5 min', 'dans 9 min', 'dans 13 min', 'dans 7 min', 'dans 15 min']);
+});
+
+test('hides the update time when the server sends none', async () => {
+  const { updated, container } = setup();
+  await initialize(container, '{}', {}, {
+    api: { transitPassages: async () => ({ ...OVERVIEW, updatedAt: null }) },
+    setInterval: () => 1,
+  });
+
+  assert.equal(updated.hidden, true);
+  assert.equal(updated.textContent, '');
 });
 
 test('shows the server notice such as the missing PRIM key and the test badge', async () => {

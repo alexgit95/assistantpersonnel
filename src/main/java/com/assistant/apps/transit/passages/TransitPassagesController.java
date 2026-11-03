@@ -82,10 +82,12 @@ public class TransitPassagesController {
     }
 
     @GetMapping("/next")
-    @Operation(summary = "Récupère les 4 à 6 prochains passages de chaque arrêt du profil (6 avec 1 ou 2 arrêts, 4 avec 3)")
+    @Operation(summary = "Récupère, par arrêt du profil, les 3 prochains passages de chaque ligne (4 lignes avec 1 arrêt, 2 avec 2, 1 avec 3)",
+            description = "Les passages d'un arrêt sont groupés par ligne : les blocs sont triés par leur premier passage et les passages "
+                    + "croissants dans chaque bloc. `updatedAt` est la plus ancienne heure de mise à jour des arrêts ayant des données.")
     @ApiResponses({
             @ApiResponse(responseCode = "200",
-                    description = "Passages en minutes restantes, message de pause, de budget ou de clé absente"),
+                    description = "Passages groupés par ligne en minutes restantes, heure de mise à jour, message de pause, de budget ou de clé absente"),
             @ApiResponse(responseCode = "401", description = "Session absente ou expirée",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Widget Prochains passages désactivé",
