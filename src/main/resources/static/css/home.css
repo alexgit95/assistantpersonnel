@@ -603,6 +603,18 @@ button {
   display: none;
 }
 
+.kiosk-key-error {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--assistant-danger);
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
+.kiosk-key-error[hidden] {
+  display: none;
+}
+
 .qr-link {
   display: block;
   color: inherit;

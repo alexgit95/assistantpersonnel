@@ -287,6 +287,7 @@ async function start() {
         panel: document.getElementById('qr-panel'),
         link: document.getElementById('qr-link'),
         image: document.getElementById('qr-image'),
+        keyError: document.getElementById('kiosk-key-error'),
         overlay: document.getElementById('capture-overlay'),
         title: document.getElementById('capture-title'),
         count: document.getElementById('capture-count'),

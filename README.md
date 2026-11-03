@@ -187,7 +187,7 @@ Le navigateur du Raspberry Pi (ou de l'ordinateur du miroir) s'ouvre en plein é
 chromium-browser --kiosk --noerrdialogs "http://localhost:8080/?kiosk=une-cle-partagee-avec-le-navigateur-du-pi"
 ```
 
-La clé est lue une fois, gardée en `sessionStorage` puis retirée de la barre d'adresse ; elle est envoyée dans l'en-tête `X-Kiosk-Key` sur les appels réservés au Pi (connexion, prolongation, session de capture, état du kiosque, émission des QR). Sans clé valide, ces appels répondent 403 : un smartphone ne peut pas se faire passer pour le Pi. L'écran du Pi n'est pas tactile : tout passe par les QR ci-dessous.
+La clé est lue une fois, gardée en `sessionStorage` puis retirée de la barre d'adresse ; elle est envoyée dans l'en-tête `X-Kiosk-Key` sur les appels réservés au Pi (connexion, prolongation, session de capture, état du kiosque, émission des QR). Sans clé valide, ces appels répondent 403 : un smartphone ne peut pas se faire passer pour le Pi. Dans ce cas l'écran d'accueil n'affiche aucun QR mais un message rouge à sa place, « clé de kiosque absente » (adresse ouverte sans `?kiosk=<clé>`) ou « clé de kiosque refusée » (clé différente de `ASSISTANT_KIOSK_KEY`) ; il disparaît dès que la bonne clé est utilisée. L'écran du Pi n'est pas tactile : tout passe par les QR ci-dessous.
 
 ## Parcours avec le smartphone (QR)
 

@@ -3,6 +3,7 @@ import { api, ApiError } from './api.js';
 import { avatarFromVideo } from './avatar.js';
 import { assessEnrollmentCapture } from './enrollment-policy.js';
 import { loadQrLibrary, buildQr, qrSvg } from './qr-code.js';
+import { kioskKeyProblem } from './kiosk-key.js';
 import {
   assessmentToReason, clockOffset, guidanceFor, isActionable, msUntilShot, nextAction, qrNeedsRenewal,
   rejectionMessage, secondsLeft, TERMINAL_STATES,
@@ -42,15 +43,30 @@ export function createKiosk(deps) {
       if (!document.hidden) {
         const connected = deps.isConnected();
         const state = await api.kioskState(connected && connectedQr ? [connectedQr.qrId] : []);
+        setKeyError(null);
         offset = clockOffset(state.serverNowMs, Date.now());
         capture = state.capture;
         await syncQr(connected, state);
         syncCapture(connected);
       }
     } catch (error) {
-      console.warn('État du kiosque indisponible', error);
+      if (error instanceof ApiError && error.status === 403) {
+        guest = null;
+        connectedQr = null;
+        await showQr(null);
+        setKeyError(kioskKeyProblem(window.sessionStorage));
+      } else {
+        console.warn('État du kiosque indisponible', error);
+      }
     }
     schedule();
+  }
+
+  function setKeyError(message) {
+    if (el.keyError) {
+      el.keyError.textContent = message ?? '';
+      el.keyError.hidden = !message;
+    }
   }
 
   async function syncQr(connected, state) {

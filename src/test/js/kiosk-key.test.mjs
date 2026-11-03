@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { captureKioskKey, extractKioskKey, kioskHeaders, KIOSK_HEADER } from '../../main/resources/static/js/kiosk-key.js';
+import {
+  captureKioskKey, extractKioskKey, kioskHeaders, kioskKeyProblem, KIOSK_HEADER,
+} from '../../main/resources/static/js/kiosk-key.js';
 
 function memoryStorage() {
   const data = new Map();
@@ -49,4 +51,11 @@ test('captureKioskKey keeps the stored key on later loads without parameter', ()
 
 test('kioskHeaders is empty when no key is stored', () => {
   assert.deepEqual(kioskHeaders(memoryStorage()), {});
+});
+
+test('kioskKeyProblem tells a missing key from a rejected one', () => {
+  const storage = memoryStorage();
+  assert.match(kioskKeyProblem(storage), /absente/);
+  captureKioskKey(storage, { search: '?kiosk=wrong', pathname: '/', hash: '' }, fakeHistory());
+  assert.match(kioskKeyProblem(storage), /refusée/);
 });

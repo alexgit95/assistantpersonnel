@@ -17,6 +17,7 @@
         </div>
     </div>
     <div class="identity-end">
+    <p id="kiosk-key-error" class="kiosk-key-error" role="alert" th:if="${withCamera}" hidden></p>
     <aside id="qr-panel" class="qr-panel" th:if="${withCamera}" aria-label="Accès depuis un téléphone" hidden>
         <a id="qr-link" class="qr-link"><span id="qr-image" class="qr-image"></span></a>
     </aside>

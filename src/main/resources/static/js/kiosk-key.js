@@ -31,3 +31,10 @@ export function kioskHeaders(storage) {
   const key = storage.getItem(STORAGE_KEY);
   return key ? { [KIOSK_HEADER]: key } : {};
 }
+
+/** Message a afficher quand le serveur refuse (403) un appel reserve au Pi, selon qu'une cle est memorisee ou non. */
+export function kioskKeyProblem(storage) {
+  return storage.getItem(STORAGE_KEY)
+    ? 'QR indisponible : la clé de kiosque est refusée par le serveur. Rouvrez cet écran avec l’adresse contenant la bonne clé (?kiosk=…).'
+    : 'QR indisponible : clé de kiosque absente. Ouvrez cet écran avec l’adresse contenant la clé (?kiosk=…).';
+}
