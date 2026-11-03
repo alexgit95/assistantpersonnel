@@ -277,12 +277,25 @@ button {
 #debug {
   position: fixed;
   right: 0.5rem;
-  bottom: 0.5rem;
+  bottom: 1.6rem;
   margin: 0;
   padding: var(--assistant-space-2);
   border: 1px solid var(--assistant-border);
   color: var(--assistant-muted);
   font-size: 0.8rem;
+}
+
+.app-version {
+  position: fixed;
+  right: 0.5rem;
+  bottom: 0.25rem;
+  z-index: 5;
+  margin: 0;
+  color: var(--assistant-muted);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
 }
 
 .app-widget {

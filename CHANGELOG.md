@@ -2,6 +2,14 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [1.1.2]
+
+### Added
+- Écran du kiosque : la version de l'application s'affiche en bas à droite, en texte discret, au format `version_du_pom-sha` (par exemple `1.1.1-a1b2c3d`, `1.1.1-dev` sans SHA connu). Technique : `AppVersion` combine `BuildProperties` (goal `build-info`) et le SHA de la variable `GIT_COMMIT` (image Docker), à défaut de `git.properties` (`git-commit-id-maven-plugin`, sans échec si `.git` est absent) ; le champ `appVersion` est ajouté à `GET /api/config` et la page d'accueil embarque la version avec laquelle elle a été servie (`<meta name="assistant-version">`).
+- Kiosque : toutes les 60 secondes, il relit la configuration des widgets (`GET /api/apps`) et ne ré-affiche que si elle a changé : un emplacement ou un réglage modifié depuis l'onglet de configuration ou un smartphone est pris en compte sans rechargement manuel, y compris la configuration de l'écran invité. Technique : module pur `kiosk-refresh.js` (comparaison de signature de la liste), testé par `kiosk-refresh.test.mjs`.
+- Kiosque : si le serveur annonce une autre version que celle de la page, la page se recharge, mais seulement quand personne n'est connecté ; garde-fou contre toute boucle (un seul rechargement par version serveur, `sessionStorage`). Aucun ré-affichage ni rechargement pendant un enrôlement en cours (compte à rebours, capture, choix de l'avatar), une connexion ou une déconnexion en cours, ou quand l'onglet est masqué.
+- Tests : `AppVersionTest`, `appVersion` et en-têtes de cache dans `SessionFlowIntegrationTest`, `kiosk-refresh.test.mjs`.
+
 ## [1.1.1]
 
 ### Added
@@ -11,6 +19,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Écran d'accueil : quand le serveur refuse (403) les appels réservés au kiosque, un message rouge à la place du QR indique pourquoi (« clé de kiosque absente » ou « clé de kiosque refusée »), au lieu d'un QR simplement absent. Technique : `kiosk.js` intercepte le 403 de `/api/kiosk/state`, masque le QR et affiche `#kiosk-key-error` ; le message disparaît dès que l'état est de nouveau lu. Texte choisi par `kioskKeyProblem` (`kiosk-key.js`), test dans `kiosk-key.test.mjs`.
 
 ### Changed
+- Les fichiers `/js/**` et `/css/**` sont servis avec `Cache-Control: no-cache` (revalidation à chaque chargement) afin qu'un rechargement après déploiement récupère le nouveau code ; `/vendor/**` garde son cache de 30 jours. Le mode debug (`#debug`) est décalé de quelques pixels pour ne pas chevaucher la version.
 - Widget « Prochains passages » : le plafond de 6 passages (1 ou 2 arrêts) ou 4 (3 arrêts) par arrêt est remplacé par un plafond de lignes par arrêt, chacune avec ses 3 prochains passages : 4 lignes avec 1 arrêt, 2 avec 2 arrêts, 1 avec 3 arrêts (un arrêt indisponible compte). Fonctionnel : l'affichage est plus lisible et son volume borné, le kiosque n'ayant ni souris ni clavier pour défiler.
 - Widget « Prochains passages » : chaque rangée affiche la ligne (la lettre du train ou le numéro du bus, sans « Bus » ni nom de réseau), la destination et le temps restant ; une seule heure « Mis à jour HH:MM » (Europe/Paris, sans date) remplace l'heure par arrêt ; l'espacement vertical entre les rangées est augmenté. Technique : `PassageView.line` utilise `TransitLine.shortName` (repli sur l'identifiant de ligne) ; le widget Transports garde son libellé complet.
 

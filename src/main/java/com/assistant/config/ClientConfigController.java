@@ -19,9 +19,11 @@ public class ClientConfigController {
     static final int EMBEDDING_SIZE = com.assistant.profile.EmbeddingCodec.SIZE;
 
     private final AssistantProperties properties;
+    private final AppVersion appVersion;
 
-    public ClientConfigController(AssistantProperties properties) {
+    public ClientConfigController(AssistantProperties properties, AppVersion appVersion) {
         this.properties = properties;
+        this.appVersion = appVersion;
     }
 
     @Operation(summary = "Reglages de reconnaissance, de session et d'interface utiles au navigateur")
@@ -46,7 +48,7 @@ public class ClientConfigController {
                 assets.mode().name().toLowerCase(java.util.Locale.ROOT), assets.faceApiUrl(), assets.modelsUrl(),
                 assets.wasmScriptUrl(), assets.wasmUrl(),
                 properties.kiosk().pollIdleMs(), properties.kiosk().pollActiveMs(), properties.qr().devMode(),
-                properties.qr().sizeRem());
+                properties.qr().sizeRem(), appVersion.display());
     }
 
     public record ClientConfig(
@@ -76,6 +78,7 @@ public class ClientConfigController {
             int kioskPollIdleMs,
             int kioskPollActiveMs,
             boolean qrDevMode,
-            double qrSizeRem) {
+            double qrSizeRem,
+            String appVersion) {
     }
 }

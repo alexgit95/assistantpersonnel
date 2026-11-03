@@ -35,6 +35,13 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/vendor/**")
                 .addResourceLocations("classpath:/static/vendor/")
                 .setCacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic());
+        // Revalidation a chaque chargement : un rechargement apres deploiement recupere le nouveau code du kiosque.
+        registry.addResourceHandler("/js/**")
+                .addResourceLocations("classpath:/static/js/")
+                .setCacheControl(CacheControl.noCache());
+        registry.addResourceHandler("/css/**")
+                .addResourceLocations("classpath:/static/css/")
+                .setCacheControl(CacheControl.noCache());
     }
 
     @Override

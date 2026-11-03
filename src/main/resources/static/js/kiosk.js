@@ -251,5 +251,9 @@ export function createKiosk(deps) {
     get capturing() {
       return capturing;
     },
+    /** Dernière session de capture lue sur le serveur (ou null). */
+    get capture() {
+      return capture;
+    },
   };
 }

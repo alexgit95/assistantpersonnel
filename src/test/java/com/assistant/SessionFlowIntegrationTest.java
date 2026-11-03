@@ -109,6 +109,8 @@ class SessionFlowIntegrationTest {
         ProfileAppService profileAppService;
         @Autowired
         ApiQuotaService apiQuotaService;
+        @Autowired
+        com.assistant.config.AppVersion appVersion;
 
     @Test
     void secureRequestsNeverCarryHstsSoMobileStaysOnHttp() throws Exception {
@@ -223,7 +225,37 @@ class SessionFlowIntegrationTest {
                 .andExpect(jsonPath("$.faceApiUrl").value(org.hamcrest.Matchers.containsString("@1.7.15")))
                 .andExpect(jsonPath("$.faceModelsUrl").value(org.hamcrest.Matchers.containsString("/model")))
                 .andExpect(jsonPath("$.typingEnabled").value(true))
-                .andExpect(jsonPath("$.typingSpeedMs").value(25));
+                .andExpect(jsonPath("$.typingSpeedMs").value(25))
+                .andExpect(jsonPath("$.appVersion").value(appVersion.display()))
+                .andExpect(jsonPath("$.appVersion").value(org.hamcrest.Matchers
+                        .matchesPattern("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?-([0-9a-f]{7}|dev)")));
+    }
+
+    @Test
+    void kioskScriptsAndStylesAreRevalidatedWhileModelsKeepTheirLongCache() throws Exception {
+        mvc.perform(get("/js/home.js"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-cache")));
+        mvc.perform(get("/js/widgets/weight.js"))
+                .andExpect(header().string("Cache-Control", containsString("no-cache")));
+        mvc.perform(get("/css/home.css"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-cache")));
+        mvc.perform(get("/vendor/qrcode/qrcode.js"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("max-age=2592000")));
+    }
+
+    @Test
+    void homePageEmbedsTheVersionItWasServedWithButTheMobilePagesDoNot() throws Exception {
+        mvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "<meta name=\"assistant-version\" content=\"" + appVersion.display() + "\">")))
+                .andExpect(content().string(containsString("id=\"app-version\"")))
+                .andExpect(content().string(containsString(">" + appVersion.display() + "</p>")));
+        mvc.perform(get("/mobile")).andExpect(content().string(org.hamcrest.Matchers.not(
+                containsString("assistant-version"))));
     }
 
     @Test

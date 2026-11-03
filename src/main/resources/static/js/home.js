@@ -8,6 +8,7 @@ import { animateMarkedText, typeText } from './typewriter.js';
 import { createProfileMenu } from './profile-menu.js';
 import { captureKioskKey } from './kiosk-key.js';
 import { createKiosk } from './kiosk.js';
+import { appsSignature, CHECK_INTERVAL_MS, createRefresher, isEnrollmentBlocking } from './kiosk-refresh.js';
 
 captureKioskKey(window.sessionStorage, window.location, window.history);
 
@@ -41,6 +42,8 @@ let appPreferences = [];
 let wake = () => {};
 let kiosk = null;
 let capturePaused = false;
+let shownSignature = null;
+let sessionChanging = 0;
 
 function setStatus(text) {
   typeText(el.status, text, typingOptions());
@@ -154,9 +157,11 @@ async function renderAppWidgets() {
 async function loadProfileApps() {
   try {
     appPreferences = await api.apps();
+    shownSignature = appsSignature(appPreferences);
     await renderAppWidgets();
   } catch (error) {
     appPreferences = [];
+    shownSignature = null;
     await renderAppWidgets();
     console.warn('Préférences des applications indisponibles', error);
   }
@@ -180,6 +185,10 @@ async function observe() {
 
 async function execute(actions) {
   for (const action of actions) {
+    const changesSession = ['login', 'logout', 'expired'].includes(action.type);
+    if (changesSession) {
+      sessionChanging += 1;
+    }
     try {
       if (action.type === 'login') {
         await api.login(action.profileId);
@@ -192,6 +201,10 @@ async function execute(actions) {
       }
     } catch (error) {
       handleApiFailure(action, error);
+    } finally {
+      if (changesSession) {
+        sessionChanging -= 1;
+      }
     }
   }
   if (actions.some((action) => ['login', 'logout', 'expired'].includes(action.type))) {
@@ -251,6 +264,27 @@ async function restoreSession() {
   }
 }
 
+// Une minute, fixe : relit la configuration des widgets et recharge la page sur nouvelle version quand personne n'est connecte.
+function startPeriodicCheck() {
+  const refresher = createRefresher({
+    pageVersion: document.querySelector('meta[name="assistant-version"]')?.content ?? '',
+    isBusy: () => document.hidden || capturePaused || sessionChanging > 0 || isEnrollmentBlocking(kiosk?.capture),
+    isConnected: () => machine.state === State.CONNECTED,
+    fetchConfig: () => api.config(),
+    fetchApps: () => api.apps(),
+    currentSignature: () => shownSignature,
+    applyApps: async (apps) => {
+      appPreferences = apps;
+      shownSignature = appsSignature(apps);
+      await renderAppWidgets();
+    },
+    reload: () => window.location.reload(),
+    storage: window.sessionStorage,
+  });
+  window.setInterval(() => refresher.tick().catch((error) => console.warn('Vérification du kiosque en échec', error)),
+    CHECK_INTERVAL_MS);
+}
+
 async function start() {
   try {
     updateClock();
@@ -297,6 +331,7 @@ async function start() {
       },
     });
     kiosk.start();
+    startPeriodicCheck();
   } catch (error) {
     stopCamera(cameraStream);
     cameraStream = null;
