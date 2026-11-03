@@ -30,5 +30,5 @@
 
 - [x] 5.1 Mettre à jour le `README.md` (description du widget Prochains passages : regroupement par ligne, plafonds de lignes, heure unique)
 - [x] 5.2 Mettre à jour le `CHANGELOG.md` (`[Added]`, `[Changed]`, `[Fixed]`) avec l'impact technique et fonctionnel
-- [ ] 5.3 Vérifier à l'écran les plafonds de 4, 2 et 1 ligne sur l'emplacement principal et sur un emplacement secondaire (mode TEST) et ajuster les constantes si le contenu est coupé
+- [x] 5.3 Vérifier à l'écran les plafonds de 4, 2 et 1 ligne sur l'emplacement principal et sur un emplacement secondaire (mode TEST) et ajuster les constantes si le contenu est coupé
 - [x] 5.4 Vérifier qu'aucune modification de `docs/database.puml` n'est nécessaire et lancer `openspec validate passages-groupes-par-ligne`
