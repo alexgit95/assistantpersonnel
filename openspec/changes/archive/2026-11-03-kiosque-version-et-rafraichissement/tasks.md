@@ -29,5 +29,5 @@
 
 - [x] 5.1 Mettre à jour le `README.md` (version affichée en bas à droite, sources du SHA par mode, rafraîchissement automatique de la configuration chaque minute, rechargement sur nouvelle version quand personne n'est connecté, exclusion de l'enrôlement)
 - [x] 5.2 Mettre à jour le `CHANGELOG.md` (`[Added]`, `[Changed]`, `[Fixed]`) avec l'impact technique et fonctionnel
-- [ ] 5.3 Vérifier à l'écran : version visible sans masquer un widget de façon gênante, modification de configuration prise en compte en moins d'une minute, enrôlement non perturbé, rechargement après une nouvelle version seulement quand personne n'est connecté
+- [x] 5.3 Vérifier à l'écran : version visible sans masquer un widget de façon gênante, modification de configuration prise en compte en moins d'une minute, enrôlement non perturbé, rechargement après une nouvelle version seulement quand personne n'est connecté
 - [x] 5.4 Vérifier qu'aucune modification de `docs/database.puml` n'est nécessaire et lancer `openspec validate kiosque-version-et-rafraichissement`
