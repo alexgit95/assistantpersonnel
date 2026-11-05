@@ -355,3 +355,4 @@ La CI GitHub publie une image `linux/arm64` sur Docker Hub : `<utilisateur>/assi
 - Rafraîchissement périodique : chaque widget météo et poids recharge ses données puis ré-écrit ses textes avec l'animation d'écriture, à un intervalle aléatoire de 15 à 60 s propre au widget ; le tracé du graphique de poids est rejoué. Le cycle du poids est suspendu quand la carte est retournée ou qu'un champ de saisie a le focus. Un échec de rechargement conserve l'affichage précédent ; sans animation d'écriture, aucun cycle n'est lancé.
 - Session glissante, bascule automatique vers un autre profil reconnu, bouton Déconnexion (reconnaissance suspendue le temps configuré).
 - Chaque profil ne voit que ses propres données.
+  
